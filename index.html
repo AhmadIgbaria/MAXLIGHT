@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מערכת ניהול תקלות</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin:0; font-family: "Segoe UI", Arial, sans-serif; background:#f8fafc; color:#0f172a; }
@@ -79,10 +79,21 @@
 const CONFIG = {
   SUPABASE_URL: "https://xxwusvclbcdgbujkjrem.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4d3VzdmNsYmNkZ2J1amtqcmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MDAwNjIsImV4cCI6MjEwMDk3NjA2Mn0.dBNkphuwVerlME8ciHNqvltDvy5wLieTYpcOvV1M1D0",
+};
 
-const sb = (CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.includes("PASTE"))
-  ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
-  : null;
+let sb = null;
+let sbInitError = null;
+try {
+  if (typeof window.supabase === "undefined") {
+    sbInitError = "ספריית Supabase לא נטענה מהאינטרנט (ייתכן חוסם פרסומות, רשת חוסמת, או בעיית חיבור). נסה לרענן, לכבות חוסם פרסומות, או לנסות רשת/דפדפן אחר.";
+  } else if (CONFIG.SUPABASE_URL.includes("PASTE") || CONFIG.SUPABASE_ANON_KEY.includes("PASTE")) {
+    sbInitError = "לא הוגדר חיבור ל-Supabase — יש להדביק את ה-URL ואת ה-anon key בתוך הקוד (CONFIG).";
+  } else {
+    sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  }
+} catch (e) {
+  sbInitError = "שגיאה באתחול החיבור ל-Supabase: " + (e.message || e);
+}
 
 function nowStr() {
   return new Date().toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
@@ -161,7 +172,7 @@ async function refreshState() {
 
 async function initialLoad() {
   if (!sb) {
-    state.apiError = "לא הוגדר חיבור ל-Supabase — יש להדביק את ה-URL ואת ה-anon key בתוך הקוד (CONFIG).";
+    state.apiError = sbInitError || "לא ניתן להתחבר ל-Supabase.";
     state.loading = false;
     render();
     return;
@@ -790,6 +801,19 @@ function wireEvents() {
     };
   });
 }
+
+window.addEventListener("error", (e) => {
+  const app = document.getElementById("app");
+  if (app && !app.innerHTML.trim()) {
+    app.innerHTML = `
+      <div style="max-width:480px; margin:60px auto; text-align:center; padding:0 20px; font-family:sans-serif">
+        <div style="font-size:32px; margin-bottom:12px">⚠️</div>
+        <h2>שגיאה בטעינת האפליקציה</h2>
+        <p style="color:#64748b">${(e.message || e.error || "שגיאה לא ידועה").toString()}</p>
+      </div>
+    `;
+  }
+});
 
 initialLoad();
 </script>
