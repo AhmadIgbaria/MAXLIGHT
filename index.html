@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת ניהול תקלות</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", Arial, sans-serif; background:#f8fafc; color:#0f172a; }
+  header { background:#0f172a; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand .icon { width:36px; height:36px; border-radius:8px; background:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .brand h1 { margin:0; font-size:17px; }
+  .brand p { margin:0; font-size:11px; color:#94a3b8; }
+  .logout-btn { display:flex; align-items:center; gap:6px; font-size:12px; color:#cbd5e1; background:#1e293b; border:none; border-radius:999px; padding:6px 12px; cursor:pointer; }
+  .logout-btn:hover { background:#334155; color:#fff; }
+  nav { background:#fff; border-bottom:1px solid #e2e8f0; padding:0 24px; display:flex; gap:4px; }
+  nav button { display:flex; align-items:center; gap:8px; padding:12px 16px; font-size:14px; font-weight:500; border:none; background:none; border-bottom:2px solid transparent; color:#64748b; cursor:pointer; }
+  nav button.active { border-color:#f59e0b; color:#0f172a; }
+  nav button:hover:not(.active) { color:#1e293b; }
+  main { padding:24px; max-width:900px; margin:0 auto; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px; }
+  .field { display:block; margin-bottom:12px; }
+  .field span.label { display:block; font-size:12px; font-weight:500; color:#475569; margin-bottom:4px; }
+  .input, select, input[type=text], input[type=date], input[type=password], textarea {
+    width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; font-size:14px; outline:none; background:#fff; font-family:inherit;
+  }
+  textarea { min-height:90px; resize:vertical; }
+  .input:focus, select:focus, textarea:focus { border-color:#94a3b8; }
+  .btn-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#0f172a; color:#fff; border:none; border-radius:8px; padding:10px; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-primary:hover { background:#1e293b; }
+  .btn-amber { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:6px 16px; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-amber:hover { background:#f59e0b; }
+  .btn-dark-sm { background:#0f172a; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:500; cursor:pointer; }
+  .btn-disabled { background:#f1f5f9; color:#94a3b8; border:none; border-radius:8px; padding:6px 14px; font-size:12px; cursor:not-allowed; }
+  .badge { font-size:11px; font-weight:500; padding:3px 10px; border-radius:999px; border:1px solid; }
+  .b-open { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+  .b-assigned { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+  .b-progress { background:#e0e7ff; color:#3730a3; border-color:#c7d2fe; }
+  .b-closed { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
+  .b-rejected { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+  .muted { color:#64748b; font-size:12px; }
+  .light { color:#94a3b8; }
+  .pill-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .pill { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; }
+  .pill.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+  .empty { text-align:center; padding:36px; font-size:13px; color:#94a3b8; border:1px dashed #e2e8f0; border-radius:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead { background:#f8fafc; color:#64748b; font-size:12px; }
+  th, td { text-align:right; padding:8px 10px; white-space:nowrap; }
+  tbody tr { border-top:1px solid #f1f5f9; cursor:pointer; }
+  tbody tr:hover { background:#f8fafc; }
+  .detail-row td { white-space:normal; cursor:default; }
+  .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 20px; font-size:12px; color:#475569; }
+  .row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; }
+  .row label { font-size:12px; }
+  .row .label { display:block; color:#64748b; margin-bottom:4px; }
+  img.thumb { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:8px; }
+  .notice { display:flex; align-items:center; gap:8px; font-size:13px; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+  .notice-ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
+  .notice-err { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+  .login-box { max-width:360px; margin:0 auto; }
+  .login-icon { width:44px; height:44px; border-radius:999px; background:#0f172a; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:20px; }
+  .hint { margin-top:14px; font-size:11px; color:#94a3b8; background:#f1f5f9; border-radius:8px; padding:10px; line-height:1.6; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   הגדרת חיבור למסד הנתונים (Supabase)
+   ============================================================
+   1. ב-Supabase: Project Settings > API
+   2. הדבק כאן את ה-"Project URL" ואת ה-"anon public" key
+   ============================================================ */
+const CONFIG = {
+  SUPABASE_URL: "sb_publishable__JHaVu87Y7EfFAX_aBb18A_6oz3Pm9K",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4d3VzdmNsYmNkZ2J1amtqcmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MDAwNjIsImV4cCI6MjEwMDk3NjA2Mn0.dBNkphuwVerlME8ciHNqvltDvy5wLieTYpcOvV1M1D0",
+};
+
+const sb = (CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.includes("PASTE"))
+  ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+  : null;
+
+function nowStr() {
+  return new Date().toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+}
+function fmtDateTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+}
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function fmtNum(n) { return "#" + String(n).padStart(4, "0"); }
+function esc(s) {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+let state = {
+  tab: "customer",
+  currentUser: null,
+  tickets: [],
+  auditLog: [],
+  users: [],
+  auditFilter: "all",
+  expandedAudit: null,
+  loginError: "",
+  sentNotice: false,
+  loading: true,
+  apiError: null,
+  busy: false,
+};
+
+const STATUS_BADGE = { "פתוחה":"b-open", "משויכת":"b-assigned", "בטיפול":"b-progress", "סגורה":"b-closed", "נדחתה":"b-rejected" };
+
+function findTicket(id) { return state.tickets.find(t => t.id === id); }
+
+function rowToTicket(r) {
+  return {
+    id: r.id,
+    ticketNumber: r.ticket_number,
+    name: r.name || "", phone: r.phone || "", address: r.address || "", description: r.description || "",
+    sku: r.sku || "", agent: r.agent || "", originalCustomer: r.original_customer || "",
+    image: r.image || null,
+    status: r.status,
+    technician: r.technician || null,
+    treatmentDate: r.treatment_date,
+    createdAt: fmtDateTime(r.created_at),
+    technicianNotes: r.technician_notes || "",
+    technicianImage: r.technician_image || null,
+  };
+}
+function rowToAudit(r) {
+  return {
+    id: r.id,
+    ticketId: r.ticket_id,
+    ticketNumber: r.ticket_number,
+    performedBy: r.performed_by,
+    changeType: r.change_type,
+    oldValue: r.old_value,
+    newValue: r.new_value,
+    changedAt: fmtDateTime(r.changed_at),
+  };
+}
+
+async function refreshState() {
+  const [ticketsRes, auditRes, usersRes] = await Promise.all([
+    sb.from("tickets").select("*").order("ticket_number", { ascending: false }),
+    sb.from("audit_log").select("*").order("changed_at", { ascending: false }),
+    sb.from("users").select("username,name,role"),
+  ]);
+  if (ticketsRes.error) throw ticketsRes.error;
+  if (auditRes.error) throw auditRes.error;
+  if (usersRes.error) throw usersRes.error;
+  state.tickets = ticketsRes.data.map(rowToTicket);
+  state.auditLog = auditRes.data.map(rowToAudit);
+  state.users = usersRes.data;
+}
+
+async function initialLoad() {
+  if (!sb) {
+    state.apiError = "לא הוגדר חיבור ל-Supabase — יש להדביק את ה-URL ואת ה-anon key בתוך הקוד (CONFIG).";
+    state.loading = false;
+    render();
+    return;
+  }
+  try {
+    await refreshState();
+    state.apiError = null;
+  } catch (e) {
+    state.apiError = "לא הצלחתי להתחבר למסד הנתונים. בדוק את ה-URL/המפתח ואת החיבור לאינטרנט. (" + (e.message || e) + ")";
+  }
+  state.loading = false;
+  render();
+}
+
+async function apiLogin(username, password) {
+  const { data, error } = await sb
+    .from("users")
+    .select("username,password,name,role")
+    .ilike("username", username)
+    .maybeSingle();
+  if (error) throw error;
+  if (data && String(data.password) === String(password)) {
+    return { ok: true, user: { username: data.username, name: data.name, role: data.role } };
+  }
+  return { ok: false, error: "שם משתמש או סיסמה שגויים" };
+}
+
+async function submitTicket(form) {
+  state.busy = true; render();
+  try {
+    const { error } = await sb.from("tickets").insert({
+      name: form.name, phone: form.phone, address: form.address, description: form.description,
+      sku: form.sku, agent: form.agent, original_customer: form.originalCustomer,
+      image: form.image, status: "פתוחה",
+    });
+    if (error) throw error;
+    await refreshState();
+    state.sentNotice = true;
+  } catch (e) {
+    alert("שגיאה בשליחת הפנייה: " + (e.message || e));
+  }
+  state.busy = false; render();
+  setTimeout(() => { state.sentNotice = false; render(); }, 3500);
+}
+
+async function insertAudit(ticketId, ticketNumber, performedBy, changeType, oldValue, newValue) {
+  await sb.from("audit_log").insert({
+    ticket_id: ticketId, ticket_number: ticketNumber, performed_by: performedBy,
+    change_type: changeType, old_value: oldValue, new_value: newValue,
+  });
+}
+
+async function assignTicket(ticketId, technician, date, managerName) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    const { error } = await sb.from("tickets").update({ technician, treatment_date: date, status: "משויכת" }).eq("id", ticketId);
+    if (error) throw error;
+    await insertAudit(ticketId, t.ticketNumber, managerName, "שיוך לטכנאי", "—", technician);
+    await insertAudit(ticketId, t.ticketNumber, managerName, "תאריך טיפול", "—", date);
+    await refreshState();
+  } catch (e) { alert("שגיאה בשיוך: " + (e.message || e)); }
+  state.busy = false; render();
+}
+
+async function managerUpdateTicket(ticketId, date, status, technician, managerName) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    if (t.technician !== technician) await insertAudit(ticketId, t.ticketNumber, managerName, "החלפת טכנאי", t.technician || "—", technician);
+    if (t.treatmentDate !== date) await insertAudit(ticketId, t.ticketNumber, managerName, "שינוי יום טיפול", t.treatmentDate || "—", date);
+    if (t.status !== status) await insertAudit(ticketId, t.ticketNumber, managerName, "עדכון סטטוס", t.status, status);
+    const { error } = await sb.from("tickets").update({ technician, treatment_date: date, status }).eq("id", ticketId);
+    if (error) throw error;
+    await refreshState();
+  } catch (e) { alert("שגיאה בעדכון: " + (e.message || e)); }
+  state.busy = false; render();
+}
+
+async function updateTicketByTech(ticketId, technicianName, date, status, notes, techImage) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    if (t.treatmentDate !== date) await insertAudit(ticketId, t.ticketNumber, technicianName, "שינוי יום טיפול", t.treatmentDate || "—", date);
+    if (t.status !== status) await insertAudit(ticketId, t.ticketNumber, technicianName, "עדכון סטטוס", t.status, status);
+    if ((t.technicianNotes || "") !== (notes || "")) await insertAudit(ticketId, t.ticketNumber, technicianName, "הערת טכנאי", t.technicianNotes || "—", notes || "—");
+    const updates = { treatment_date: date, status, technician_notes: notes || "" };
+    if (techImage) updates.technician_image = techImage;
+    const { error } = await sb.from("tickets").update(updates).eq("id", ticketId);
+    if (error) throw error;
+    await refreshState();
+  } catch (e) { alert("שגיאה בעדכון: " + (e.message || e)); }
+  state.busy = false; render();
+}
+
+function render() {
+  const active = document.activeElement;
+  const activeId = active && active.id ? active.id : null;
+  const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+
+  const app = document.getElementById("app");
+
+  if (state.loading) {
+    app.innerHTML = `<div style="min-height:400px; display:flex; align-items:center; justify-content:center; color:#94a3b8">טוען נתונים...</div>`;
+    return;
+  }
+
+  if (state.apiError) {
+    app.innerHTML = `
+      <div style="max-width:480px; margin:60px auto; text-align:center; padding:0 20px">
+        <div style="font-size:32px; margin-bottom:12px">⚠️</div>
+        <h2 style="margin-bottom:8px">בעיית חיבור למסד הנתונים</h2>
+        <p class="muted">${esc(state.apiError)}</p>
+      </div>
+    `;
+    return;
+  }
+
+  app.innerHTML = `
+    <header>
+      <div class="brand">
+        <div class="icon">🔧</div>
+        <div><h1>מערכת ניהול תקלות</h1><p>לקוחות · מנהל לקוחות · טכנאים</p></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px">
+        ${state.busy ? `<span class="light" style="font-size:12px">שומר...</span>` : ""}
+        ${state.currentUser ? `<button class="logout-btn" id="logoutBtn">↩ ${esc(state.currentUser.name)} · התנתקות</button>` : ""}
+      </div>
+    </header>
+    <nav>
+      <button data-tab="customer" class="${state.tab==='customer'?'active':''}">👤 לקוח</button>
+      <button data-tab="staff" class="${state.tab==='staff'?'active':''}">${state.currentUser ? (state.currentUser.role==='manager'?'🧑‍💼 מנהל לקוחות':'🔧 טכנאי') : '🔒 כניסת צוות'}</button>
+    </nav>
+    <main id="main"></main>
+  `;
+  document.querySelectorAll("nav button").forEach(b => b.onclick = async () => {
+    state.tab = b.dataset.tab;
+    if (state.tab === "staff" && state.currentUser) {
+      state.loading = true; render();
+      try { await refreshState(); } catch (e) {}
+      state.loading = false;
+    }
+    render();
+  });
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) logoutBtn.onclick = () => { state.currentUser = null; render(); };
+
+  const main = document.getElementById("main");
+  if (state.tab === "customer") main.innerHTML = customerFormHtml();
+  else if (state.tab === "staff" && !state.currentUser) main.innerHTML = loginHtml();
+  else if (state.tab === "staff" && state.currentUser.role === "manager") main.innerHTML = managerHtml();
+  else if (state.tab === "staff" && state.currentUser.role === "technician") main.innerHTML = technicianHtml();
+
+  wireEvents();
+
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el) {
+      el.focus();
+      if (selStart !== null && typeof el.setSelectionRange === "function") {
+        try { el.setSelectionRange(selStart, selStart); } catch (e) {}
+      }
+    }
+  }
+}
+
+function ticketFieldsBlock(t) {
+  let html = `<div style="margin-bottom:8px"><span class="light" style="font-size:12px">תיאור התקלה: </span><span style="font-size:14px">${esc(t.description)}</span></div>`;
+  if (t.sku || t.agent || t.originalCustomer) {
+    html += `<div class="muted" style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px">`;
+    if (t.sku) html += `<span><span class="light">מק"ט: </span>${esc(t.sku)}</span>`;
+    if (t.agent) html += `<span><span class="light">סוכן: </span>${esc(t.agent)}</span>`;
+    if (t.originalCustomer) html += `<span><span class="light">לקוח מקורי: </span>${esc(t.originalCustomer)}</span>`;
+    html += `</div>`;
+  }
+  if (t.image) html += `<img class="thumb" src="${t.image}" alt="תמונת התקלה">`;
+  if (t.technicianNotes || t.technicianImage) {
+    html += `<div style="margin-top:4px; margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:8px">`;
+    html += `<div class="light" style="font-size:11px; margin-bottom:4px">הערות טכנאי:</div>`;
+    if (t.technicianNotes) html += `<div style="font-size:13px; margin-bottom:6px">${esc(t.technicianNotes)}</div>`;
+    if (t.technicianImage) html += `<img class="thumb" src="${t.technicianImage}" alt="תמונת טכנאי" style="margin-bottom:0">`;
+    html += `</div>`;
+  }
+  return html;
+}
+
+function cardHeader(t) {
+  return `
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px">
+      <div>
+        <p style="font-weight:600; font-size:14px; margin:0">${fmtNum(t.ticketNumber)} · <span class="light" style="font-weight:400">לקוח: </span>${esc(t.name)}</p>
+        <p class="muted" style="margin:2px 0 0">
+          <span class="light">טלפון: </span>${esc(t.phone)} · <span class="light">כתובת: </span>${esc(t.address)||"—"}
+        </p>
+      </div>
+      <span class="badge ${STATUS_BADGE[t.status]||''}">${t.status}</span>
+    </div>
+  `;
+}
+
+function customerFormHtml() {
+  return `
+    <div style="max-width:480px">
+      <h2 style="margin-bottom:4px">פתיחת פנייה חדשה</h2>
+      <p class="muted" style="margin-bottom:16px">אין צורך במשתמש קבוע — מלא/י את הפרטים בכל פעם מחדש.</p>
+      ${state.sentNotice ? `<div class="notice notice-ok">✓ הפנייה נשלחה בהצלחה, מנהל הלקוחות יטפל בה בקרוב.</div>` : ""}
+      <div class="card">
+        <label class="field"><span class="label">שם מלא <span style="color:#dc2626">*</span></span><input class="input" id="f_name" placeholder="לדוגמה: רונית ישראלי"></label>
+        <label class="field"><span class="label">טלפון <span style="color:#dc2626">*</span></span><input class="input" id="f_phone" placeholder="050-0000000"></label>
+        <label class="field"><span class="label">כתובת <span style="color:#dc2626">*</span></span><input class="input" id="f_address" placeholder="עיר, רחוב ומספר"></label>
+        <label class="field"><span class="label">תיאור התקלה <span style="color:#dc2626">*</span></span><textarea id="f_description" placeholder="מה קרה?"></textarea></label>
+        <div class="grid2">
+          <label class="field"><span class="label">מק"ט</span><input class="input" id="f_sku" placeholder='מק"ט המוצר'></label>
+          <label class="field"><span class="label">סוכן</span><input class="input" id="f_agent" placeholder="שם הסוכן"></label>
+        </div>
+        <label class="field"><span class="label">לקוח מקורי <span style="color:#dc2626">*</span></span><input class="input" id="f_original" placeholder="הלקוח הסופי"></label>
+        <label class="field">
+          <span class="label">תמונה</span>
+          <input type="file" accept="image/*" id="f_image">
+          <div id="imgPreview"></div>
+          <span class="light" style="font-size:10px; display:block; margin-top:4px">מומלץ תמונה קטנה/דחוסה — כדי לשמור על ביצועים טובים.</span>
+        </label>
+        <p class="light" style="font-size:11px; margin:-4px 0 10px">* שדות חובה</p>
+        <button class="btn-primary" id="submitBtn">📤 שליחת פנייה</button>
+      </div>
+    </div>
+  `;
+}
+
+function loginHtml() {
+  return `
+    <div class="login-box">
+      <div style="text-align:center; margin-bottom:20px">
+        <div class="login-icon">🔒</div>
+        <h2 style="margin:0">כניסת צוות</h2>
+        <p class="muted">למנהלי לקוחות ולטכנאים בלבד</p>
+      </div>
+      <div class="card">
+        ${state.loginError ? `<div class="notice notice-err">⚠ ${esc(state.loginError)}</div>` : ""}
+        <label class="field"><span class="label">שם משתמש</span><input class="input" id="l_username" placeholder="לדוגמה: david"></label>
+        <label class="field"><span class="label">סיסמה</span><input type="password" class="input" id="l_password" placeholder="••••"></label>
+        <button class="btn-primary" id="loginBtn">🔑 התחברות</button>
+      </div>
+      <div class="hint">
+        ברירת מחדל ראשונית (ניתן לשנות בטבלת "users" ב-Supabase): מנהל — manager1 / 1234 · טכנאים — david / moshe / yossi, סיסמה 1234 לכולם.<br>
+        שים לב: הסיסמאות נשמרות כטקסט גלוי בטבלת המשתמשים — מספיק לשימוש פנימי בסיסי, אך לא ברמת אבטחה מלאה.
+      </div>
+    </div>
+  `;
+}
+
+function managerHtml() {
+  const open = state.tickets.filter(t => t.status === "פתוחה");
+  const technicians = state.users.filter(u => u.role === "technician");
+  const mTab = state.managerTab || "open";
+
+  const search = (state.allSearch || "").trim().toLowerCase();
+  const statusFilter = state.allStatusFilter || "all";
+  let all = state.tickets;
+  if (statusFilter !== "all") all = all.filter(t => t.status === statusFilter);
+  if (search) {
+    all = all.filter(t => {
+      const hay = [fmtNum(t.ticketNumber), t.name, t.phone, t.description, t.sku, t.agent, t.address].join(" ").toLowerCase();
+      return hay.includes(search);
+    });
+  }
+
+  let body = "";
+  if (mTab === "open") {
+    body = open.length === 0 ? `<div class="empty">אין פניות פתוחות ממתינות לשיוך.</div>` :
+      open.map(t => assignCardHtml(t, technicians)).join("");
+  } else if (mTab === "all") {
+    body = `
+      <div class="row" style="margin-bottom:14px">
+        <label style="flex:1; min-width:200px"><span class="label">🔍 חיפוש (שם, טלפון, מק"ט, תיאור...)</span><input type="text" id="allSearchInput" value="${esc(state.allSearch||'')}" placeholder="חיפוש פנייה..."></label>
+        <label><span class="label">סינון לפי סטטוס</span>
+          <select id="allStatusSelect">
+            <option value="all" ${statusFilter==='all'?'selected':''}>הכל</option>
+            <option value="פתוחה" ${statusFilter==='פתוחה'?'selected':''}>פתוחה</option>
+            <option value="משויכת" ${statusFilter==='משויכת'?'selected':''}>משויכת</option>
+            <option value="בטיפול" ${statusFilter==='בטיפול'?'selected':''}>בטיפול</option>
+            <option value="סגורה" ${statusFilter==='סגורה'?'selected':''}>סגורה</option>
+            <option value="נדחתה" ${statusFilter==='נדחתה'?'selected':''}>נדחתה</option>
+          </select>
+        </label>
+      </div>
+      ${all.length === 0 ? `<div class="empty">לא נמצאו פניות תואמות.</div>` : all.map(t => allTicketCardHtml(t, technicians)).join("")}
+    `;
+  } else if (mTab === "log") {
+    body = auditTableHtml();
+  }
+
+  return `
+    <div class="pill-row">
+      <button class="pill ${mTab==='open'?'active':''}" data-mtab="open">📋 פניות פתוחות (${open.length})</button>
+      <button class="pill ${mTab==='all'?'active':''}" data-mtab="all">🔧 כל הפניות (${state.tickets.length})</button>
+      <button class="pill ${mTab==='log'?'active':''}" data-mtab="log">🕘 יומן שינויים</button>
+      <button class="pill" id="refreshBtn" style="margin-right:auto">🔄 רענון</button>
+    </div>
+    <div>${body}</div>
+  `;
+}
+
+function assignCardHtml(t, technicians) {
+  const techOptions = technicians.map(n => `<option value="${esc(n.name)}">${esc(n.name)}</option>`).join("");
+  return `
+    <div class="card" data-assign="${t.id}">
+      ${cardHeader(t)}
+      ${ticketFieldsBlock(t)}
+      <div class="row">
+        <label><span class="label">טכנאי</span><select class="assignTech">${techOptions}</select></label>
+        <label><span class="label">תאריך טיפול</span><input type="date" class="assignDate" value="${todayISO()}"></label>
+        <button class="btn-amber assignBtn">שיוך</button>
+      </div>
+    </div>
+  `;
+}
+
+function allTicketCardHtml(t, technicians) {
+  const canEdit = !!t.technician;
+  const techOptions = technicians.map(n => `<option value="${esc(n.name)}" ${t.technician===n.name?'selected':''}>${esc(n.name)}</option>`).join("");
+  return `
+    <div class="card" data-ticket="${t.id}">
+      ${cardHeader(t)}
+      ${ticketFieldsBlock(t)}
+      <div class="muted" style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:${canEdit?'8':'0'}px">
+        <span>נפתחה: ${esc(t.createdAt)}</span>
+      </div>
+      ${canEdit ? `
+        <div class="row">
+          <label><span class="label">טכנאי</span><select class="mgrTech">${techOptions}</select></label>
+          <label><span class="label">📅 תאריך טיפול</span><input type="date" class="mgrDate" value="${t.treatmentDate||todayISO()}"></label>
+          <label><span class="label">סטטוס</span>
+            <select class="mgrStatus">
+              <option value="משויכת" ${t.status==='משויכת'?'selected':''}>משויכת</option>
+              <option value="בטיפול" ${t.status==='בטיפול'?'selected':''}>בטיפול</option>
+              <option value="סגורה" ${t.status==='סגורה'?'selected':''}>סגורה</option>
+              <option value="נדחתה" ${t.status==='נדחתה'?'selected':''}>נדחתה</option>
+            </select>
+          </label>
+          <button class="btn-dark-sm mgrUpdateBtn">עדכון</button>
+        </div>` : ""}
+    </div>
+  `;
+}
+
+function auditTableHtml() {
+  if (state.auditLog.length === 0) return `<div class="empty">עדיין אין שינויים מתועדים.</div>`;
+  const nums = [...new Set(state.auditLog.map(a=>a.ticketNumber))].sort((a,b)=>a-b);
+  const orderSearch = (state.auditSearch || "").trim().replace(/^#/, "");
+  let filtered = state.auditFilter === "all" ? state.auditLog : state.auditLog.filter(a => a.ticketNumber === Number(state.auditFilter));
+  if (orderSearch) filtered = filtered.filter(a => String(a.ticketNumber).includes(orderSearch) || fmtNum(a.ticketNumber).includes(orderSearch));
+  const sorted = [...filtered].sort((a,b) => a.ticketNumber - b.ticketNumber);
+
+  const rows = sorted.map(a => {
+    const t = findTicket(a.ticketId);
+    const isOpen = state.expandedAudit === a.id;
+    let rowHtml = `
+      <tr data-audit="${a.id}">
+        <td style="font-weight:600">${fmtNum(a.ticketNumber)}</td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis" title="${esc(t?.description)}">${esc(t?.description)||"—"}</td>
+        <td style="font-weight:500">${esc(a.performedBy)}</td>
+        <td>${esc(a.changeType)}</td>
+        <td class="light">${esc(a.oldValue)}</td>
+        <td>${esc(a.newValue)}</td>
+        <td class="light">${esc(a.changedAt)}</td>
+      </tr>
+    `;
+    if (isOpen && t) {
+      rowHtml += `
+        <tr class="detail-row" style="background:#f8fafc">
+          <td colspan="7">
+            <div class="detail-grid">
+              <div><span class="light">שם לקוח: </span>${esc(t.name)}</div>
+              <div><span class="light">טלפון: </span>${esc(t.phone)}</div>
+              <div><span class="light">כתובת: </span>${esc(t.address)||"—"}</div>
+              <div><span class="light">תיאור: </span>${esc(t.description)}</div>
+              <div><span class="light">סטטוס: </span>${esc(t.status)}</div>
+              <div><span class="light">טכנאי: </span>${esc(t.technician)||"—"}</div>
+              <div><span class="light">תאריך טיפול: </span>${esc(t.treatmentDate)||"—"}</div>
+              <div><span class="light">נפתחה: </span>${esc(t.createdAt)}</div>
+              <div><span class="light">מק"ט: </span>${esc(t.sku)||"—"}</div>
+              <div><span class="light">סוכן: </span>${esc(t.agent)||"—"}</div>
+              <div><span class="light">לקוח מקורי: </span>${esc(t.originalCustomer)||"—"}</div>
+            </div>
+            ${t.image ? `<img class="thumb" style="margin-top:8px" src="${t.image}">` : ""}
+          </td>
+        </tr>
+      `;
+    }
+    return rowHtml;
+  }).join("");
+
+  return `
+    <div class="row" style="margin-bottom:8px">
+      <label style="flex:1; min-width:200px"><span class="label">🔍 חיפוש לפי מספר הזמנה</span><input type="text" id="auditSearchInput" value="${esc(state.auditSearch||'')}" placeholder="לדוגמה: 0007 או 7"></label>
+      <label><span class="label">סינון לפי מספר פנייה</span>
+        <select id="auditFilterSel">
+          <option value="all" ${state.auditFilter==='all'?'selected':''}>הכל</option>
+          ${nums.map(n => `<option value="${n}" ${state.auditFilter==String(n)?'selected':''}>${fmtNum(n)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <p class="light" style="font-size:12px; margin-bottom:8px">לחצו על שורה כדי לראות את כל פרטי הפנייה.</p>
+    <div class="card" style="padding:0; overflow:hidden">
+      <table>
+        <thead><tr><th>פנייה #</th><th>פרטי תקלה</th><th>בוצע על ידי</th><th>סוג שינוי</th><th>מ</th><th>ל</th><th>מתי</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function technicianHtml() {
+  const all = state.tickets.filter(t => t.technician === state.currentUser.name);
+  const refreshBar = `<div class="pill-row"><button class="pill" id="refreshBtn">🔄 רענון</button></div>`;
+  if (all.length === 0) return refreshBar + `<div class="empty">אין פניות משויכות אליך כרגע.</div>`;
+
+  const statusFilter = state.techStatusFilter || "all";
+  const dateFilter = state.techDateFilter || "";
+  let mine = all;
+  if (statusFilter !== "all") mine = mine.filter(t => t.status === statusFilter);
+  if (dateFilter) mine = mine.filter(t => t.treatmentDate === dateFilter);
+
+  const filterBar = `
+    <div class="row" style="margin-bottom:14px">
+      <label><span class="label">סינון לפי סטטוס</span>
+        <select id="techStatusSelect">
+          <option value="all" ${statusFilter==='all'?'selected':''}>הכל</option>
+          <option value="משויכת" ${statusFilter==='משויכת'?'selected':''}>משויכת</option>
+          <option value="בטיפול" ${statusFilter==='בטיפול'?'selected':''}>בטיפול</option>
+          <option value="סגורה" ${statusFilter==='סגורה'?'selected':''}>סגורה</option>
+          <option value="נדחתה" ${statusFilter==='נדחתה'?'selected':''}>נדחתה</option>
+        </select>
+      </label>
+      <label><span class="label">סינון לפי תאריך טיפול</span><input type="date" id="techDateFilterInput" value="${dateFilter}"></label>
+      ${(statusFilter!=='all' || dateFilter) ? `<button class="btn-dark-sm" id="techFilterClear">נקה סינון</button>` : ""}
+    </div>
+  `;
+
+  const cards = mine.length === 0
+    ? `<div class="empty">לא נמצאו פניות תואמות לסינון.</div>`
+    : mine.map(t => `
+    <div class="card" data-tech="${t.id}">
+      ${cardHeader(t)}
+      ${ticketFieldsBlock(t)}
+      <div class="light" style="font-size:12px; margin-bottom:8px">נפתחה: ${esc(t.createdAt)}</div>
+      <div class="row" style="margin-bottom:10px">
+        <label><span class="label">⏱ יום טיפול</span><input type="date" class="techDate" value="${t.treatmentDate||todayISO()}"></label>
+        <label><span class="label">סטטוס</span>
+          <select class="techStatus">
+            <option value="משויכת" ${t.status==='משויכת'?'selected':''}>משויכת</option>
+            <option value="בטיפול" ${t.status==='בטיפול'?'selected':''}>בטיפול</option>
+            <option value="סגורה" ${t.status==='סגורה'?'selected':''}>סגורה</option>
+            <option value="נדחתה" ${t.status==='נדחתה'?'selected':''}>דחייה</option>
+          </select>
+        </label>
+      </div>
+      <label class="field"><span class="label">הערות</span><textarea class="techNotes" placeholder="הערות טיפול...">${esc(t.technicianNotes||"")}</textarea></label>
+      <label class="field">
+        <span class="label">צירוף תמונה</span>
+        <input type="file" accept="image/*" class="techImageInput">
+        <div class="techImgPreview">${t.technicianImage ? `<img class="thumb" style="margin-top:8px" src="${t.technicianImage}">` : ""}</div>
+      </label>
+      <button class="btn-dark-sm techSaveBtn">שמירת שינוי</button>
+    </div>
+  `).join("");
+
+  return refreshBar + filterBar + cards;
+}
+
+let pendingImage = null;
+
+function wireEvents() {
+  // Customer form
+  const submitBtn = document.getElementById("submitBtn");
+  if (submitBtn) {
+    document.getElementById("f_image").onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result.length > 2000000) {
+          alert("התמונה גדולה מדי. נסה תמונה קטנה/דחוסה יותר (עד כ-1.5MB).");
+          e.target.value = "";
+          return;
+        }
+        pendingImage = reader.result;
+        document.getElementById("imgPreview").innerHTML = `<img class="thumb" style="margin-top:8px" src="${pendingImage}">`;
+      };
+      reader.readAsDataURL(file);
+    };
+    submitBtn.onclick = () => {
+      const name = document.getElementById("f_name").value.trim();
+      const phone = document.getElementById("f_phone").value.trim();
+      const address = document.getElementById("f_address").value.trim();
+      const description = document.getElementById("f_description").value.trim();
+      const originalCustomer = document.getElementById("f_original").value.trim();
+      if (!name || !phone || !address || !description || !originalCustomer) {
+        alert("יש למלא שם, טלפון, כתובת, תיאור התקלה, ולקוח מקורי — שדות אלו חובה.");
+        return;
+      }
+      const img = pendingImage;
+      pendingImage = null;
+      submitTicket({
+        name, phone, address, description, originalCustomer,
+        sku: document.getElementById("f_sku").value.trim(),
+        agent: document.getElementById("f_agent").value.trim(),
+        image: img,
+      });
+    };
+  }
+
+  // Login
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn) {
+    const tryLogin = async () => {
+      const u = document.getElementById("l_username").value.trim();
+      const p = document.getElementById("l_password").value;
+      loginBtn.disabled = true;
+      loginBtn.textContent = "מתחבר...";
+      try {
+        const res = await apiLogin(u, p);
+        if (res.ok) { state.currentUser = res.user; state.loginError = ""; }
+        else { state.loginError = res.error || "שם משתמש או סיסמה שגויים"; }
+      } catch (e) {
+        state.loginError = "שגיאת תקשורת עם השרת — נסה שוב";
+      }
+      render();
+    };
+    loginBtn.onclick = tryLogin;
+    ["l_username","l_password"].forEach(id => {
+      document.getElementById(id).onkeydown = (e) => { if (e.key === "Enter") tryLogin(); };
+    });
+  }
+
+  // Manager tabs
+  document.querySelectorAll("[data-mtab]").forEach(b => b.onclick = () => { state.managerTab = b.dataset.mtab; render(); });
+
+  // Manual refresh
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) refreshBtn.onclick = async () => {
+    state.loading = true; render();
+    try { await refreshState(); } catch (e) {}
+    state.loading = false;
+    render();
+  };
+
+  // All-tickets search & status filter
+  const allSearchInput = document.getElementById("allSearchInput");
+  if (allSearchInput) allSearchInput.oninput = () => { state.allSearch = allSearchInput.value; render(); };
+  const allStatusSelect = document.getElementById("allStatusSelect");
+  if (allStatusSelect) allStatusSelect.onchange = () => { state.allStatusFilter = allStatusSelect.value; render(); };
+
+  // Assign
+  document.querySelectorAll("[data-assign]").forEach(card => {
+    const id = card.dataset.assign;
+    card.querySelector(".assignBtn").onclick = () => {
+      const tech = card.querySelector(".assignTech").value;
+      const date = card.querySelector(".assignDate").value;
+      assignTicket(id, tech, date, state.currentUser.name);
+    };
+  });
+
+  // Manager date+status+technician change (all tab)
+  document.querySelectorAll("[data-ticket]").forEach(card => {
+    const btn = card.querySelector(".mgrUpdateBtn");
+    if (!btn) return;
+    const dateInput = card.querySelector(".mgrDate");
+    const statusSelect = card.querySelector(".mgrStatus");
+    const techSelect = card.querySelector(".mgrTech");
+    btn.onclick = () => {
+      managerUpdateTicket(card.dataset.ticket, dateInput.value, statusSelect.value, techSelect.value, state.currentUser.name);
+    };
+  });
+
+  // Audit filter + search + row expand
+  const auditSel = document.getElementById("auditFilterSel");
+  if (auditSel) auditSel.onchange = () => { state.auditFilter = auditSel.value; render(); };
+  const auditSearchInput = document.getElementById("auditSearchInput");
+  if (auditSearchInput) auditSearchInput.oninput = () => { state.auditSearch = auditSearchInput.value; render(); };
+  document.querySelectorAll("tr[data-audit]").forEach(tr => {
+    tr.onclick = () => {
+      const id = tr.dataset.audit;
+      state.expandedAudit = state.expandedAudit === id ? null : id;
+      render();
+    };
+  });
+
+  // Technician filters
+  const techStatusSelect = document.getElementById("techStatusSelect");
+  if (techStatusSelect) techStatusSelect.onchange = () => { state.techStatusFilter = techStatusSelect.value; render(); };
+  const techDateFilterInput = document.getElementById("techDateFilterInput");
+  if (techDateFilterInput) techDateFilterInput.onchange = () => { state.techDateFilter = techDateFilterInput.value; render(); };
+  const techFilterClear = document.getElementById("techFilterClear");
+  if (techFilterClear) techFilterClear.onclick = () => { state.techStatusFilter = "all"; state.techDateFilter = ""; render(); };
+
+  // Technician
+  document.querySelectorAll("[data-tech]").forEach(card => {
+    const id = card.dataset.tech;
+    let pendingTechImage = null;
+    const imgInput = card.querySelector(".techImageInput");
+    if (imgInput) {
+      imgInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result.length > 2000000) {
+            alert("התמונה גדולה מדי. נסה תמונה קטנה/דחוסה יותר (עד כ-1.5MB).");
+            e.target.value = "";
+            return;
+          }
+          pendingTechImage = reader.result;
+          card.querySelector(".techImgPreview").innerHTML = `<img class="thumb" style="margin-top:8px" src="${pendingTechImage}">`;
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+    const btn = card.querySelector(".techSaveBtn");
+    btn.onclick = () => {
+      const date = card.querySelector(".techDate").value;
+      const status = card.querySelector(".techStatus").value;
+      const notes = card.querySelector(".techNotes").value;
+      updateTicketByTech(id, state.currentUser.name, date, status, notes, pendingTechImage);
+    };
+  });
+}
+
+initialLoad();
+</script>
+</body>
+</html>
