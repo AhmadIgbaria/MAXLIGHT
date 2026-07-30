@@ -412,13 +412,9 @@ function loginHtml() {
       </div>
       <div class="card">
         ${state.loginError ? `<div class="notice notice-err">⚠ ${esc(state.loginError)}</div>` : ""}
-        <label class="field"><span class="label">שם משתמש</span><input class="input" id="l_username" placeholder="לדוגמה: david"></label>
+        <label class="field"><span class="label">שם משתמש</span><input class="input" id="l_username" placeholder=""></label>
         <label class="field"><span class="label">סיסמה</span><input type="password" class="input" id="l_password" placeholder="••••"></label>
         <button class="btn-primary" id="loginBtn">🔑 התחברות</button>
-      </div>
-      <div class="hint">
-        ברירת מחדל ראשונית (ניתן לשנות בטבלת "users" ב-Supabase): מנהל — manager1 / 1234 · טכנאים — david / moshe / yossi, סיסמה 1234 לכולם.<br>
-        שים לב: הסיסמאות נשמרות כטקסט גלוי בטבלת המשתמשים — מספיק לשימוש פנימי בסיסי, אך לא ברמת אבטחה מלאה.
       </div>
     </div>
   `;
