@@ -77,9 +77,8 @@
    2. הדבק כאן את ה-"Project URL" ואת ה-"anon public" key
    ============================================================ */
 const CONFIG = {
-  SUPABASE_URL: "sb_publishable__JHaVu87Y7EfFAX_aBb18A_6oz3Pm9K",
+  SUPABASE_URL: "https://xxwusvclbcdgbujkjrem.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4d3VzdmNsYmNkZ2J1amtqcmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MDAwNjIsImV4cCI6MjEwMDk3NjA2Mn0.dBNkphuwVerlME8ciHNqvltDvy5wLieTYpcOvV1M1D0",
-};
 
 const sb = (CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.includes("PASTE"))
   ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
