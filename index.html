@@ -4,65 +4,66 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מערכת ניהול תקלות</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin:0; font-family: "Segoe UI", Arial, sans-serif; background:#f8fafc; color:#0f172a; }
   header { background:#0f172a; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
   .brand { display:flex; align-items:center; gap:12px; }
-  .brand .icon { width:36px; height:36px; border-radius:8px; background:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:18px; }
-  .brand h1 { margin:0; font-size:17px; }
-  .brand p { margin:0; font-size:11px; color:#94a3b8; }
-  .logout-btn { display:flex; align-items:center; gap:6px; font-size:12px; color:#cbd5e1; background:#1e293b; border:none; border-radius:999px; padding:6px 12px; cursor:pointer; }
+  .brand .icon { width:36px; height:36px; border-radius:8px; background:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .brand h1 { margin:0; font-size:19px; }
+  .brand p { margin:0; font-size:13px; color:#94a3b8; }
+  .logout-btn { display:flex; align-items:center; gap:6px; font-size:14px; color:#cbd5e1; background:#1e293b; border:none; border-radius:999px; padding:6px 12px; cursor:pointer; }
   .logout-btn:hover { background:#334155; color:#fff; }
   nav { background:#fff; border-bottom:1px solid #e2e8f0; padding:0 24px; display:flex; gap:4px; }
-  nav button { display:flex; align-items:center; gap:8px; padding:12px 16px; font-size:14px; font-weight:500; border:none; background:none; border-bottom:2px solid transparent; color:#64748b; cursor:pointer; }
+  nav button { display:flex; align-items:center; gap:8px; padding:12px 16px; font-size:16px; font-weight:500; border:none; background:none; border-bottom:2px solid transparent; color:#64748b; cursor:pointer; }
   nav button.active { border-color:#f59e0b; color:#0f172a; }
   nav button:hover:not(.active) { color:#1e293b; }
   main { padding:24px; max-width:900px; margin:0 auto; }
   .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px; }
   .field { display:block; margin-bottom:12px; }
-  .field span.label { display:block; font-size:12px; font-weight:500; color:#475569; margin-bottom:4px; }
+  .field span.label { display:block; font-size:14px; font-weight:500; color:#475569; margin-bottom:4px; }
   .input, select, input[type=text], input[type=date], input[type=password], textarea {
-    width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; font-size:14px; outline:none; background:#fff; font-family:inherit;
+    width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; font-size:16px; outline:none; background:#fff; font-family:inherit;
   }
   textarea { min-height:90px; resize:vertical; }
   .input:focus, select:focus, textarea:focus { border-color:#94a3b8; }
-  .btn-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#0f172a; color:#fff; border:none; border-radius:8px; padding:10px; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#0f172a; color:#fff; border:none; border-radius:8px; padding:10px; font-size:16px; font-weight:500; cursor:pointer; }
   .btn-primary:hover { background:#1e293b; }
-  .btn-amber { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:6px 16px; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-amber { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:6px 16px; font-size:16px; font-weight:500; cursor:pointer; }
   .btn-amber:hover { background:#f59e0b; }
-  .btn-dark-sm { background:#0f172a; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:500; cursor:pointer; }
-  .btn-disabled { background:#f1f5f9; color:#94a3b8; border:none; border-radius:8px; padding:6px 14px; font-size:12px; cursor:not-allowed; }
-  .badge { font-size:11px; font-weight:500; padding:3px 10px; border-radius:999px; border:1px solid; }
+  .btn-dark-sm { background:#0f172a; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-disabled { background:#f1f5f9; color:#94a3b8; border:none; border-radius:8px; padding:6px 14px; font-size:14px; cursor:not-allowed; }
+  .badge { font-size:13px; font-weight:500; padding:3px 10px; border-radius:999px; border:1px solid; }
   .b-open { background:#fef3c7; color:#92400e; border-color:#fde68a; }
   .b-assigned { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
   .b-progress { background:#e0e7ff; color:#3730a3; border-color:#c7d2fe; }
   .b-closed { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
   .b-rejected { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
-  .muted { color:#64748b; font-size:12px; }
+  .muted { color:#64748b; font-size:14px; }
   .light { color:#94a3b8; }
   .pill-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-  .pill { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; }
+  .pill { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:14px; font-weight:500; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; }
   .pill.active { background:#0f172a; color:#fff; border-color:#0f172a; }
-  .empty { text-align:center; padding:36px; font-size:13px; color:#94a3b8; border:1px dashed #e2e8f0; border-radius:12px; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  thead { background:#f8fafc; color:#64748b; font-size:12px; }
+  .empty { text-align:center; padding:36px; font-size:15px; color:#94a3b8; border:1px dashed #e2e8f0; border-radius:12px; }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  thead { background:#f8fafc; color:#64748b; font-size:14px; }
   th, td { text-align:right; padding:8px 10px; white-space:nowrap; }
   tbody tr { border-top:1px solid #f1f5f9; cursor:pointer; }
   tbody tr:hover { background:#f8fafc; }
   .detail-row td { white-space:normal; cursor:default; }
-  .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 20px; font-size:12px; color:#475569; }
+  .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 20px; font-size:14px; color:#475569; }
   .row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; }
-  .row label { font-size:12px; }
+  .row label { font-size:14px; }
   .row .label { display:block; color:#64748b; margin-bottom:4px; }
   img.thumb { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:8px; }
-  .notice { display:flex; align-items:center; gap:8px; font-size:13px; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+  .notice { display:flex; align-items:center; gap:8px; font-size:15px; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
   .notice-ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
   .notice-err { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
   .login-box { max-width:360px; margin:0 auto; }
-  .login-icon { width:44px; height:44px; border-radius:999px; background:#0f172a; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:20px; }
-  .hint { margin-top:14px; font-size:11px; color:#94a3b8; background:#f1f5f9; border-radius:8px; padding:10px; line-height:1.6; }
+  .login-icon { width:44px; height:44px; border-radius:999px; background:#0f172a; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:22px; }
+  .hint { margin-top:14px; font-size:13px; color:#94a3b8; background:#f1f5f9; border-radius:8px; padding:10px; line-height:1.6; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 </style>
 </head>
@@ -95,6 +96,36 @@ try {
   sbInitError = "שגיאה באתחול החיבור ל-Supabase: " + (e.message || e);
 }
 
+/* ============================================================
+   הגדרת שליחת מיילים (EmailJS)
+   ============================================================
+   1. הירשם בחינם ב-emailjs.com
+   2. Email Services -> Add New Service -> חבר את ה-Gmail שלך -> תעתיק Service ID
+   3. Email Templates -> Create New Template -> תשתמש במשתנים {{to_email}} {{subject}} {{message}} -> תעתיק Template ID
+   4. Account -> General -> Public Key -> תעתיק אותו
+   5. תדביק את שלושתם למטה, תמלא MANAGER_EMAIL, ותשנה ENABLED ל-true
+   ============================================================ */
+const EMAIL_CONFIG = {
+  ENABLED: true,
+  PUBLIC_KEY: "Cy4csv4_eP_qJU191",
+  SERVICE_ID: "service_3bssnwn",
+  TEMPLATE_ID: "template_prfo4ky",
+  MANAGER_EMAIL: "ahmadtaha@starlighting.co.il",
+};
+if (EMAIL_CONFIG.ENABLED && typeof emailjs !== "undefined") {
+  try { emailjs.init(EMAIL_CONFIG.PUBLIC_KEY); } catch (e) { console.error("EmailJS init failed:", e); }
+}
+function sendEmailNotification(toEmail, subject, message) {
+  if (!EMAIL_CONFIG.ENABLED || !toEmail || typeof emailjs === "undefined") return;
+  emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
+    to_email: toEmail, subject: subject, message: message,
+  }).catch(err => console.error("שליחת מייל נכשלה:", err));
+}
+function technicianEmail(name) {
+  const u = state.users.find(x => x.role === "technician" && x.name === name);
+  return u ? u.email : null;
+}
+
 function nowStr() {
   return new Date().toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
 }
@@ -107,6 +138,292 @@ function fmtNum(n) { return "#" + String(n).padStart(4, "0"); }
 function esc(s) {
   if (s === null || s === undefined) return "";
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ============================================================
+   אשף תיאור תקלה ממוקד (מזגן / תאורה)
+   ============================================================ */
+const AC_ISSUES = {
+  "נוזל / מטפטף": {
+    icon: "💧",
+    question: "מאיפה המים מטפטפים?",
+    options: [
+      "מתוך היחידה שבתוך הבית (על הקיר/רצפה)",
+      "מהצינור או המנוע שנמצאים בחוץ",
+    ],
+  },
+  "לא מקרר / לא מחמם": {
+    icon: "❄️",
+    question: "מה המזגן עושה בפועל?",
+    options: [
+      { label: "מוציא רק רוח פושרת (כמו מאוורר)", followUp: {
+        question: "האם המנוע/המאוורר בחוץ מסתובב ועובד?",
+        options: ["כן, עובד כרגיל", "לא, שקט לחלוטין", "לא יודע / אין לי גישה לראות"],
+      }},
+      { label: "לא מוציא אוויר בכלל מהתריסים" },
+      { label: "עובד כמה דקות, מפסיק, ואז חוזר לעבוד" },
+    ],
+  },
+  "לא נדלק בכלל / מקצר את החשמל": {
+    icon: "🔌",
+    question: "מה קורה כשמנסים להדליק?",
+    options: [
+      'המזגן מקפיץ את החשמל בלוח (את הממ"ת או הפחת)',
+      "המזגן משמיע צפצוף (ביפ) אבל לא נדלק",
+      "אין שום תגובה, אין אורות ואין צפצוף (מת לחלוטין)",
+    ],
+  },
+  "משמיע רעשים חזקים וחריגים": {
+    icon: "🔊",
+    question: "מאיפה מגיע הרעש ואיך הוא נשמע?",
+    options: [
+      "רעש של חריקות או דפיקות מהיחידה בתוך הבית",
+      "רעש חזק מאוד של רעידות מהמנוע בחוץ",
+      "רעש של שריקה או זרימת אוויר חנוקה",
+    ],
+  },
+  "יש ריח רע מהמזגן": {
+    icon: "🤢",
+    question: "איזה סוג ריח יש באוויר?",
+    options: [
+      "ריח חזק של עובש, טחב או לחות",
+      "ריח חריף של שרוף (כמו פלסטיק או חוטים)",
+      "ריח של נבלה או חיה מתה",
+    ],
+  },
+  "מציג קוד תקלה על המסך": {
+    icon: "🔢",
+    freeTextQuestion: "אנא הקלד את האותיות והמספרים שמופיעים על צג המזגן או השלט",
+    freeTextPlaceholder: "לדוגמה: E5, F2...",
+  },
+  "אחר": {
+    icon: "❓",
+    freeTextQuestion: "תאר את התקלה בקצרה במילים שלך",
+    freeTextPlaceholder: "כתוב כאן את התיאור...",
+  },
+};
+
+const LIGHT_PROBLEMS = ["לא נדלק בכלל", "מקצר את החשמל", "מהבהב / מרצד", "אור חלש מאוד", "רעש של זמזום מהמנורה", "אחר"];
+const LIGHT_TYPES = ["נורת לד (LED)", "נורה רגילה / הברגה (להט / הלוגן)", "פס לדים / ספוטים"];
+const LIGHT_COLORS = ["3000K (אור חם)", "4000K (אור ניטרלי)", "6000K (אור קר)", "CCT (גוון מתחלף)", "RGB (צבעוני)"];
+
+function blankWizard() {
+  return {
+    category: null,
+    ac: { issue: null, followUp: null, followUp2: null, freeText: "" },
+    light: { problem: null, lampType: null, color: null, otherText: "" },
+  };
+}
+function resetWizard() { state.wizard = blankWizard(); }
+
+function composeACDescription() {
+  const ac = state.wizard.ac;
+  if (!ac.issue) return null;
+  const conf = AC_ISSUES[ac.issue];
+  const parts = ["מזגן", ac.issue];
+  if (conf.freeTextQuestion) {
+    if (!ac.freeText.trim()) return null;
+    parts.push("קוד תקלה: " + ac.freeText.trim());
+    return parts.join(" — ");
+  }
+  if (!ac.followUp) return null;
+  parts.push(ac.followUp);
+  const opt = conf.options.find(o => (typeof o === "string" ? o : o.label) === ac.followUp);
+  if (opt && opt.followUp) {
+    if (!ac.followUp2) return null;
+    parts.push(ac.followUp2);
+  }
+  return parts.join(" — ");
+}
+function composeLightDescription() {
+  const l = state.wizard.light;
+  if (!l.problem) return null;
+  if (l.problem === "אחר") {
+    if (!l.otherText || !l.otherText.trim()) return null;
+    return "תאורה — אחר — " + l.otherText.trim();
+  }
+  const parts = ["תאורה", l.problem];
+  if (!l.lampType) return null;
+  parts.push("סוג: " + l.lampType);
+  const needsColor = l.lampType === "נורת לד (LED)" || l.lampType === "פס לדים / ספוטים";
+  if (needsColor) {
+    if (!l.color) return null;
+    parts.push("גוון: " + l.color);
+  }
+  return parts.join(" — ");
+}
+function getComposedDescription() {
+  if (state.wizard.category === "מזגן") return composeACDescription();
+  if (state.wizard.category === "תאורה") return composeLightDescription();
+  return null;
+}
+
+function goBackOneWizardStep() {
+  const w = state.wizard;
+  if (w.category === "מזגן") {
+    const ac = w.ac;
+    const conf = ac.issue ? AC_ISSUES[ac.issue] : null;
+    if (conf && conf.freeTextQuestion) { ac.issue = null; ac.freeText = ""; return; }
+    if (ac.followUp2) { ac.followUp2 = null; return; }
+    if (ac.followUp) { ac.followUp = null; return; }
+    if (ac.issue) { ac.issue = null; return; }
+  }
+  if (w.category === "תאורה") {
+    const l = w.light;
+    if (l.problem === "אחר") { l.problem = null; l.otherText = ""; return; }
+    if (l.color) { l.color = null; return; }
+    if (l.lampType) { l.lampType = null; return; }
+    if (l.problem) { l.problem = null; return; }
+  }
+}
+
+function wizardHtml() {
+  const w = state.wizard;
+
+  if (!w.category) {
+    return `
+      <div style="display:flex; gap:10px">
+        <button type="button" class="wizBtn wizCategory" data-cat="מזגן" style="flex:1; padding:18px 8px; font-size:17px; text-align:center; border:1px solid #e2e8f0; border-radius:8px; background:#fff; cursor:pointer">❄️<br>מזגן</button>
+        <button type="button" class="wizBtn wizCategory" data-cat="תאורה" style="flex:1; padding:18px 8px; font-size:17px; text-align:center; border:1px solid #e2e8f0; border-radius:8px; background:#fff; cursor:pointer">💡<br>תאורה</button>
+      </div>
+    `;
+  }
+
+  const composed = getComposedDescription();
+  if (composed) {
+    return `
+      <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px; margin-bottom:8px">
+        <div class="light" style="font-size:13px; margin-bottom:2px">תיאור שנוצר:</div>
+        <div style="font-size:15px; color:#065f46">${esc(composed)}</div>
+      </div>
+      <button type="button" class="btn-dark-sm" id="wizResetBtn">🔄 התחל תיאור מחדש</button>
+    `;
+  }
+
+  let html = `<div class="light" style="font-size:13px; margin-bottom:8px">קטגוריה: ${esc(w.category)} · <button type="button" id="wizBackToCategoryBtn" style="border:none;background:none;color:#2563eb;cursor:pointer;font-size:13px;padding:0">שנה קטגוריה</button></div>`;
+  const btnStyle = 'text-align:right; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; cursor:pointer; font-size:15px;';
+  const listStart = `<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px">`;
+
+  if (w.category === "מזגן") {
+    const ac = w.ac;
+    if (!ac.issue) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">מה הבעיה?</div>${listStart}`;
+      Object.keys(AC_ISSUES).forEach(key => {
+        html += `<button type="button" class="wizBtn wizAcIssue" data-issue="${esc(key)}" style="${btnStyle}">${AC_ISSUES[key].icon} ${esc(key)}</button>`;
+      });
+      html += `</div>`;
+      return html;
+    }
+    const conf = AC_ISSUES[ac.issue];
+    if (conf.freeTextQuestion) {
+      html += `
+        <div class="light" style="font-size:14px; margin-bottom:6px">${esc(conf.freeTextQuestion)}</div>
+        <input class="input" id="wizFreeText" value="${esc(ac.freeText)}" placeholder="${esc(conf.freeTextPlaceholder || "")}">
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button type="button" class="btn-dark-sm" id="wizConfirmFreeText">אישור</button>
+          <button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>
+        </div>
+      `;
+      return html;
+    }
+    if (!ac.followUp) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">${esc(conf.question)}</div>${listStart}`;
+      conf.options.forEach(o => {
+        const label = typeof o === "string" ? o : o.label;
+        html += `<button type="button" class="wizBtn wizAcFollow" data-value="${esc(label)}" style="${btnStyle}">${esc(label)}</button>`;
+      });
+      html += `</div><button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>`;
+      return html;
+    }
+    const opt = conf.options.find(o => (typeof o === "string" ? o : o.label) === ac.followUp);
+    if (opt && opt.followUp && !ac.followUp2) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">${esc(opt.followUp.question)}</div>${listStart}`;
+      opt.followUp.options.forEach(label => {
+        html += `<button type="button" class="wizBtn wizAcFollow2" data-value="${esc(label)}" style="${btnStyle}">${esc(label)}</button>`;
+      });
+      html += `</div><button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>`;
+      return html;
+    }
+  }
+
+  if (w.category === "תאורה") {
+    const l = w.light;
+    if (!l.problem) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">מה הבעיה?</div>${listStart}`;
+      LIGHT_PROBLEMS.forEach(label => {
+        html += `<button type="button" class="wizBtn wizLightProblem" data-value="${esc(label)}" style="${btnStyle}">${esc(label)}</button>`;
+      });
+      html += `</div>`;
+      return html;
+    }
+    if (l.problem === "אחר") {
+      html += `
+        <div class="light" style="font-size:14px; margin-bottom:6px">תאר את התקלה בקצרה</div>
+        <input class="input" id="wizLightOtherText" value="${esc(l.otherText || "")}" placeholder="למשל: המנורה נופלת מהתושבת">
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button type="button" class="btn-dark-sm" id="wizConfirmLightOther">אישור</button>
+          <button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>
+        </div>
+      `;
+      return html;
+    }
+    if (!l.lampType) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">סוג המנורה</div>${listStart}`;
+      LIGHT_TYPES.forEach(label => {
+        html += `<button type="button" class="wizBtn wizLightType" data-value="${esc(label)}" style="${btnStyle}">${esc(label)}</button>`;
+      });
+      html += `</div><button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>`;
+      return html;
+    }
+    const needsColor = l.lampType === "נורת לד (LED)" || l.lampType === "פס לדים / ספוטים";
+    if (needsColor && !l.color) {
+      html += `<div class="light" style="font-size:14px; margin-bottom:8px">גוון האור</div>${listStart}`;
+      LIGHT_COLORS.forEach(label => {
+        html += `<button type="button" class="wizBtn wizLightColor" data-value="${esc(label)}" style="${btnStyle}">${esc(label)}</button>`;
+      });
+      html += `</div><button type="button" class="btn-dark-sm" id="wizBackBtn" style="background:#f1f5f9; color:#334155">🔙 חזרה</button>`;
+      return html;
+    }
+  }
+
+  return html;
+}
+
+function renderWizard() {
+  const container = document.getElementById("wizardContainer");
+  if (!container) return;
+  container.innerHTML = wizardHtml();
+  wireWizardEvents();
+}
+
+function wireWizardEvents() {
+  document.querySelectorAll(".wizCategory").forEach(b => b.onclick = () => { state.wizard.category = b.dataset.cat; renderWizard(); });
+  const backToCat = document.getElementById("wizBackToCategoryBtn");
+  if (backToCat) backToCat.onclick = () => { resetWizard(); renderWizard(); };
+  const resetBtn = document.getElementById("wizResetBtn");
+  if (resetBtn) resetBtn.onclick = () => { resetWizard(); renderWizard(); };
+  document.querySelectorAll(".wizAcIssue").forEach(b => b.onclick = () => { state.wizard.ac.issue = b.dataset.issue; renderWizard(); });
+  document.querySelectorAll(".wizAcFollow").forEach(b => b.onclick = () => { state.wizard.ac.followUp = b.dataset.value; renderWizard(); });
+  document.querySelectorAll(".wizAcFollow2").forEach(b => b.onclick = () => { state.wizard.ac.followUp2 = b.dataset.value; renderWizard(); });
+  document.querySelectorAll(".wizLightProblem").forEach(b => b.onclick = () => { state.wizard.light.problem = b.dataset.value; renderWizard(); });
+  document.querySelectorAll(".wizLightType").forEach(b => b.onclick = () => { state.wizard.light.lampType = b.dataset.value; renderWizard(); });
+  document.querySelectorAll(".wizLightColor").forEach(b => b.onclick = () => { state.wizard.light.color = b.dataset.value; renderWizard(); });
+  const freeTextInput = document.getElementById("wizFreeText");
+  if (freeTextInput) freeTextInput.oninput = () => { state.wizard.ac.freeText = freeTextInput.value; };
+  const confirmFreeText = document.getElementById("wizConfirmFreeText");
+  if (confirmFreeText) confirmFreeText.onclick = () => {
+    if (!state.wizard.ac.freeText.trim()) { alert("יש למלא את השדה"); return; }
+    renderWizard();
+  };
+  const lightOtherInput = document.getElementById("wizLightOtherText");
+  if (lightOtherInput) lightOtherInput.oninput = () => { state.wizard.light.otherText = lightOtherInput.value; };
+  const confirmLightOther = document.getElementById("wizConfirmLightOther");
+  if (confirmLightOther) confirmLightOther.onclick = () => {
+    if (!state.wizard.light.otherText || !state.wizard.light.otherText.trim()) { alert("יש לתאר את התקלה"); return; }
+    renderWizard();
+  };
+  const backBtn = document.getElementById("wizBackBtn");
+  if (backBtn) backBtn.onclick = () => { goBackOneWizardStep(); renderWizard(); };
 }
 
 let state = {
@@ -122,7 +439,10 @@ let state = {
   loading: true,
   apiError: null,
   busy: false,
+  wizard: null,
+  editingDetailsTicketId: null,
 };
+state.wizard = blankWizard();
 
 const STATUS_BADGE = { "פתוחה":"b-open", "משויכת":"b-assigned", "בטיפול":"b-progress", "סגורה":"b-closed", "נדחתה":"b-rejected" };
 
@@ -160,7 +480,7 @@ async function refreshState() {
   const [ticketsRes, auditRes, usersRes] = await Promise.all([
     sb.from("tickets").select("*").order("ticket_number", { ascending: false }),
     sb.from("audit_log").select("*").order("changed_at", { ascending: false }),
-    sb.from("users").select("username,name,role"),
+    sb.from("users").select("username,name,role,email"),
   ]);
   if (ticketsRes.error) throw ticketsRes.error;
   if (auditRes.error) throw auditRes.error;
@@ -190,7 +510,7 @@ async function initialLoad() {
 async function apiLogin(username, password) {
   const { data, error } = await sb
     .from("users")
-    .select("username,password,name,role")
+    .select("username,password,name,role,email")
     .ilike("username", username)
     .maybeSingle();
   if (error) throw error;
@@ -203,14 +523,19 @@ async function apiLogin(username, password) {
 async function submitTicket(form) {
   state.busy = true; render();
   try {
-    const { error } = await sb.from("tickets").insert({
+    const { data, error } = await sb.from("tickets").insert({
       name: form.name, phone: form.phone, address: form.address, description: form.description,
       sku: form.sku, agent: form.agent, original_customer: form.originalCustomer,
       image: form.image, status: "פתוחה",
-    });
+    }).select().single();
     if (error) throw error;
     await refreshState();
     state.sentNotice = true;
+    sendEmailNotification(
+      EMAIL_CONFIG.MANAGER_EMAIL,
+      "פנייה חדשה נפתחה " + fmtNum(data.ticket_number),
+      "נפתחה פנייה חדשה מאת " + form.name + " (" + form.phone + ").\nתיאור: " + form.description
+    );
   } catch (e) {
     alert("שגיאה בשליחת הפנייה: " + (e.message || e));
   }
@@ -234,6 +559,11 @@ async function assignTicket(ticketId, technician, date, managerName) {
     await insertAudit(ticketId, t.ticketNumber, managerName, "שיוך לטכנאי", "—", technician);
     await insertAudit(ticketId, t.ticketNumber, managerName, "תאריך טיפול", "—", date);
     await refreshState();
+    sendEmailNotification(
+      technicianEmail(technician),
+      "שויכה אליך פנייה חדשה " + fmtNum(t.ticketNumber),
+      "פנייה " + fmtNum(t.ticketNumber) + " שויכה אליך.\nלקוח: " + t.name + " (" + t.phone + ")\nתיאור: " + t.description + "\nתאריך טיפול: " + date
+    );
   } catch (e) { alert("שגיאה בשיוך: " + (e.message || e)); }
   state.busy = false; render();
 }
@@ -249,6 +579,32 @@ async function managerUpdateTicket(ticketId, date, status, technician, managerNa
     if (error) throw error;
     await refreshState();
   } catch (e) { alert("שגיאה בעדכון: " + (e.message || e)); }
+  state.busy = false; render();
+}
+
+const DETAIL_FIELD_LABELS = { name: "שם לקוח", phone: "טלפון", address: "כתובת", description: "תיאור תקלה", sku: 'מק"ט', agent: "סוכן", originalCustomer: "לקוח מקורי" };
+const DETAIL_FIELD_DB_KEYS = { name: "name", phone: "phone", address: "address", description: "description", sku: "sku", agent: "agent", originalCustomer: "original_customer" };
+
+async function managerUpdateDetails(ticketId, updates, managerName) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    const dbUpdates = {};
+    for (const key of Object.keys(updates)) {
+      const oldVal = t[key] || "—";
+      const newVal = updates[key] || "—";
+      if (oldVal !== newVal) {
+        await insertAudit(ticketId, t.ticketNumber, managerName, "עדכון " + DETAIL_FIELD_LABELS[key], oldVal, newVal);
+        dbUpdates[DETAIL_FIELD_DB_KEYS[key]] = updates[key];
+      }
+    }
+    if (Object.keys(dbUpdates).length) {
+      const { error } = await sb.from("tickets").update(dbUpdates).eq("id", ticketId);
+      if (error) throw error;
+    }
+    await refreshState();
+  } catch (e) { alert("שגיאה בעדכון פרטים: " + (e.message || e)); }
+  state.editingDetailsTicketId = null;
   state.busy = false; render();
 }
 
@@ -283,7 +639,7 @@ function render() {
   if (state.apiError) {
     app.innerHTML = `
       <div style="max-width:480px; margin:60px auto; text-align:center; padding:0 20px">
-        <div style="font-size:32px; margin-bottom:12px">⚠️</div>
+        <div style="font-size:34px; margin-bottom:12px">⚠️</div>
         <h2 style="margin-bottom:8px">בעיית חיבור למסד הנתונים</h2>
         <p class="muted">${esc(state.apiError)}</p>
       </div>
@@ -298,7 +654,7 @@ function render() {
         <div><h1>מערכת ניהול תקלות</h1><p>לקוחות · מנהל לקוחות · טכנאים</p></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px">
-        ${state.busy ? `<span class="light" style="font-size:12px">שומר...</span>` : ""}
+        ${state.busy ? `<span class="light" style="font-size:14px">שומר...</span>` : ""}
         ${state.currentUser ? `<button class="logout-btn" id="logoutBtn">↩ ${esc(state.currentUser.name)} · התנתקות</button>` : ""}
       </div>
     </header>
@@ -339,20 +695,35 @@ function render() {
   }
 }
 
+function miniField(label, value) {
+  return `<div><div class="light" style="font-size:11px; margin-bottom:2px">${esc(label)}</div><div style="font-size:15px; font-weight:600; color:#0f172a">${esc(value) || "—"}</div></div>`;
+}
+
+function waLink(phone, ticketNumber) {
+  if (!phone) return null;
+  let digits = String(phone).replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("0")) digits = "972" + digits.slice(1);
+  else if (!digits.startsWith("972")) digits = "972" + digits;
+  const waMessage = "שלום,\nמדבר הטכנאי. אני בדרך אליך לטיפול בתקלה.\nאשמח אם תשלח לי את המיקום המדויק שלך (אפשר לשלוח מיקום ב-Waze), כדי שאוכל להגיע אליך בקלות.\nתודה!";
+  const text = "?text=" + encodeURIComponent(waMessage);
+  return "https://wa.me/" + digits + text;
+}
+
 function ticketFieldsBlock(t) {
-  let html = `<div style="margin-bottom:8px"><span class="light" style="font-size:12px">תיאור התקלה: </span><span style="font-size:14px">${esc(t.description)}</span></div>`;
+  let html = `<div style="margin-bottom:10px"><div class="light" style="font-size:11px; margin-bottom:2px">תיאור התקלה</div><div style="font-size:16px">${esc(t.description)}</div></div>`;
   if (t.sku || t.agent || t.originalCustomer) {
-    html += `<div class="muted" style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px">`;
-    if (t.sku) html += `<span><span class="light">מק"ט: </span>${esc(t.sku)}</span>`;
-    if (t.agent) html += `<span><span class="light">סוכן: </span>${esc(t.agent)}</span>`;
-    if (t.originalCustomer) html += `<span><span class="light">לקוח מקורי: </span>${esc(t.originalCustomer)}</span>`;
+    html += `<div style="display:flex; flex-wrap:wrap; gap:14px 24px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #f1f5f9">`;
+    if (t.sku) html += miniField('מק"ט', t.sku);
+    if (t.agent) html += miniField("סוכן", t.agent);
+    if (t.originalCustomer) html += miniField("לקוח מקורי", t.originalCustomer);
     html += `</div>`;
   }
   if (t.image) html += `<img class="thumb" src="${t.image}" alt="תמונת התקלה">`;
   if (t.technicianNotes || t.technicianImage) {
     html += `<div style="margin-top:4px; margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:8px">`;
-    html += `<div class="light" style="font-size:11px; margin-bottom:4px">הערות טכנאי:</div>`;
-    if (t.technicianNotes) html += `<div style="font-size:13px; margin-bottom:6px">${esc(t.technicianNotes)}</div>`;
+    html += `<div class="light" style="font-size:13px; margin-bottom:4px">הערות טכנאי:</div>`;
+    if (t.technicianNotes) html += `<div style="font-size:15px; margin-bottom:6px">${esc(t.technicianNotes)}</div>`;
     if (t.technicianImage) html += `<img class="thumb" src="${t.technicianImage}" alt="תמונת טכנאי" style="margin-bottom:0">`;
     html += `</div>`;
   }
@@ -360,13 +731,19 @@ function ticketFieldsBlock(t) {
 }
 
 function cardHeader(t) {
+  const wa = waLink(t.phone, t.ticketNumber);
+  const phoneHtml = t.phone
+    ? (wa
+        ? `<a href="${wa}" target="_blank" rel="noopener" style="color:#16a34a; font-weight:600; font-size:15px; text-decoration:none; display:inline-flex; align-items:center; gap:4px">${esc(t.phone)} 💬</a>`
+        : `<span style="font-size:15px; font-weight:600; color:#0f172a">${esc(t.phone)}</span>`)
+    : `<span style="font-size:15px; font-weight:600; color:#0f172a">—</span>`;
   return `
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px">
-      <div>
-        <p style="font-weight:600; font-size:14px; margin:0">${fmtNum(t.ticketNumber)} · <span class="light" style="font-weight:400">לקוח: </span>${esc(t.name)}</p>
-        <p class="muted" style="margin:2px 0 0">
-          <span class="light">טלפון: </span>${esc(t.phone)} · <span class="light">כתובת: </span>${esc(t.address)||"—"}
-        </p>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:10px; padding-bottom:10px; border-bottom:1px solid #f1f5f9">
+      <div style="display:flex; flex-wrap:wrap; gap:14px 24px">
+        ${miniField("מספר פנייה", fmtNum(t.ticketNumber))}
+        ${miniField("לקוח", t.name)}
+        <div><div class="light" style="font-size:11px; margin-bottom:2px">טלפון</div>${phoneHtml}</div>
+        ${miniField("כתובת", t.address)}
       </div>
       <span class="badge ${STATUS_BADGE[t.status]||''}">${t.status}</span>
     </div>
@@ -376,14 +753,16 @@ function cardHeader(t) {
 function customerFormHtml() {
   return `
     <div style="max-width:480px">
-      <h2 style="margin-bottom:4px">פתיחת פנייה חדשה</h2>
-      <p class="muted" style="margin-bottom:16px">אין צורך במשתמש קבוע — מלא/י את הפרטים בכל פעם מחדש.</p>
+      <h2 style="margin-bottom:4px">פתיחת פנייה</h2>
+      <p class="muted" style="margin-bottom:16px">מלא/י את הפרטים</p>
       ${state.sentNotice ? `<div class="notice notice-ok">✓ הפנייה נשלחה בהצלחה, מנהל הלקוחות יטפל בה בקרוב.</div>` : ""}
       <div class="card">
         <label class="field"><span class="label">שם מלא <span style="color:#dc2626">*</span></span><input class="input" id="f_name" placeholder="לדוגמה: רונית ישראלי"></label>
         <label class="field"><span class="label">טלפון <span style="color:#dc2626">*</span></span><input class="input" id="f_phone" placeholder="050-0000000"></label>
         <label class="field"><span class="label">כתובת <span style="color:#dc2626">*</span></span><input class="input" id="f_address" placeholder="עיר, רחוב ומספר"></label>
-        <label class="field"><span class="label">תיאור התקלה <span style="color:#dc2626">*</span></span><textarea id="f_description" placeholder="מה קרה?"></textarea></label>
+        <label class="field"><span class="label">תיאור התקלה <span style="color:#dc2626">*</span></span></label>
+        <div id="wizardContainer" style="margin-bottom:14px">${wizardHtml()}</div>
+        <label class="field"><span class="label">פרטים נוספים (לא חובה)</span><textarea id="f_extra_notes" placeholder="מידע נוסף אם יש..."></textarea></label>
         <div class="grid2">
           <label class="field"><span class="label">מק"ט</span><input class="input" id="f_sku" placeholder='מק"ט המוצר'></label>
           <label class="field"><span class="label">סוכן</span><input class="input" id="f_agent" placeholder="שם הסוכן"></label>
@@ -393,9 +772,8 @@ function customerFormHtml() {
           <span class="label">תמונה</span>
           <input type="file" accept="image/*" id="f_image">
           <div id="imgPreview"></div>
-          <span class="light" style="font-size:10px; display:block; margin-top:4px">מומלץ תמונה קטנה/דחוסה — כדי לשמור על ביצועים טובים.</span>
         </label>
-        <p class="light" style="font-size:11px; margin:-4px 0 10px">* שדות חובה</p>
+        <p class="light" style="font-size:13px; margin:-4px 0 10px">* שדות חובה</p>
         <button class="btn-primary" id="submitBtn">📤 שליחת פנייה</button>
       </div>
     </div>
@@ -487,13 +865,42 @@ function assignCardHtml(t, technicians) {
   `;
 }
 
+function editDetailsFormHtml(t) {
+  return `
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px">
+      <div class="grid2">
+        <label class="field"><span class="label">שם לקוח</span><input class="input editName" value="${esc(t.name)}"></label>
+        <label class="field"><span class="label">טלפון</span><input class="input editPhone" value="${esc(t.phone)}"></label>
+      </div>
+      <label class="field"><span class="label">כתובת</span><input class="input editAddress" value="${esc(t.address)}"></label>
+      <label class="field"><span class="label">תיאור התקלה</span><textarea class="input editDescription">${esc(t.description)}</textarea></label>
+      <div class="grid2">
+        <label class="field"><span class="label">מק"ט</span><input class="input editSku" value="${esc(t.sku)}"></label>
+        <label class="field"><span class="label">סוכן</span><input class="input editAgent" value="${esc(t.agent)}"></label>
+      </div>
+      <label class="field"><span class="label">לקוח מקורי</span><input class="input editOriginal" value="${esc(t.originalCustomer)}"></label>
+      <div style="display:flex; gap:8px; margin-top:4px">
+        <button type="button" class="btn-dark-sm saveDetailsBtn" data-id="${t.id}">💾 שמירת פרטים</button>
+        <button type="button" class="btn-dark-sm cancelEditBtn" style="background:#f1f5f9; color:#334155">ביטול</button>
+      </div>
+    </div>
+  `;
+}
+
 function allTicketCardHtml(t, technicians) {
   const canEdit = !!t.technician;
+  const isEditing = state.editingDetailsTicketId === t.id;
   const techOptions = technicians.map(n => `<option value="${esc(n.name)}" ${t.technician===n.name?'selected':''}>${esc(n.name)}</option>`).join("");
+
+  if (isEditing) {
+    return `<div class="card" data-ticket="${t.id}">${editDetailsFormHtml(t)}</div>`;
+  }
+
   return `
     <div class="card" data-ticket="${t.id}">
       ${cardHeader(t)}
       ${ticketFieldsBlock(t)}
+      <button type="button" class="btn-dark-sm editDetailsToggle" data-id="${t.id}" style="background:#f1f5f9; color:#334155; margin-bottom:8px">✏️ עריכת פרטי פנייה</button>
       <div class="muted" style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:${canEdit?'8':'0'}px">
         <span>נפתחה: ${esc(t.createdAt)}</span>
       </div>
@@ -572,7 +979,7 @@ function auditTableHtml() {
         </select>
       </label>
     </div>
-    <p class="light" style="font-size:12px; margin-bottom:8px">לחצו על שורה כדי לראות את כל פרטי הפנייה.</p>
+    <p class="light" style="font-size:14px; margin-bottom:8px">לחצו על שורה כדי לראות את כל פרטי הפנייה.</p>
     <div class="card" style="padding:0; overflow:hidden">
       <table>
         <thead><tr><th>פנייה #</th><th>פרטי תקלה</th><th>בוצע על ידי</th><th>סוג שינוי</th><th>מ</th><th>ל</th><th>מתי</th></tr></thead>
@@ -615,7 +1022,7 @@ function technicianHtml() {
     <div class="card" data-tech="${t.id}">
       ${cardHeader(t)}
       ${ticketFieldsBlock(t)}
-      <div class="light" style="font-size:12px; margin-bottom:8px">נפתחה: ${esc(t.createdAt)}</div>
+      <div class="light" style="font-size:14px; margin-bottom:8px">נפתחה: ${esc(t.createdAt)}</div>
       <div class="row" style="margin-bottom:10px">
         <label><span class="label">⏱ יום טיפול</span><input type="date" class="techDate" value="${t.treatmentDate||todayISO()}"></label>
         <label><span class="label">סטטוס</span>
@@ -661,18 +1068,26 @@ function wireEvents() {
       };
       reader.readAsDataURL(file);
     };
+    wireWizardEvents();
     submitBtn.onclick = () => {
       const name = document.getElementById("f_name").value.trim();
       const phone = document.getElementById("f_phone").value.trim();
       const address = document.getElementById("f_address").value.trim();
-      const description = document.getElementById("f_description").value.trim();
       const originalCustomer = document.getElementById("f_original").value.trim();
-      if (!name || !phone || !address || !description || !originalCustomer) {
-        alert("יש למלא שם, טלפון, כתובת, תיאור התקלה, ולקוח מקורי — שדות אלו חובה.");
+      const extraNotes = document.getElementById("f_extra_notes").value.trim();
+      const composedDesc = getComposedDescription();
+      if (!composedDesc) {
+        alert("יש להשלים את תיאור התקלה (לבחור קטגוריה ולענות על השאלות) לפני השליחה.");
         return;
       }
+      if (!name || !phone || !address || !originalCustomer) {
+        alert("יש למלא שם, טלפון, כתובת, ולקוח מקורי — שדות אלו חובה.");
+        return;
+      }
+      const description = composedDesc + (extraNotes ? " | הערות: " + extraNotes : "");
       const img = pendingImage;
       pendingImage = null;
+      resetWizard();
       submitTicket({
         name, phone, address, description, originalCustomer,
         sku: document.getElementById("f_sku").value.trim(),
@@ -730,6 +1145,29 @@ function wireEvents() {
       const tech = card.querySelector(".assignTech").value;
       const date = card.querySelector(".assignDate").value;
       assignTicket(id, tech, date, state.currentUser.name);
+    };
+  });
+
+  // Edit ticket details (all tab)
+  document.querySelectorAll(".editDetailsToggle").forEach(b => b.onclick = () => { state.editingDetailsTicketId = b.dataset.id; render(); });
+  document.querySelectorAll(".cancelEditBtn").forEach(b => b.onclick = () => { state.editingDetailsTicketId = null; render(); });
+  document.querySelectorAll(".saveDetailsBtn").forEach(b => {
+    b.onclick = () => {
+      const card = b.closest(".card");
+      const updates = {
+        name: card.querySelector(".editName").value.trim(),
+        phone: card.querySelector(".editPhone").value.trim(),
+        address: card.querySelector(".editAddress").value.trim(),
+        description: card.querySelector(".editDescription").value.trim(),
+        sku: card.querySelector(".editSku").value.trim(),
+        agent: card.querySelector(".editAgent").value.trim(),
+        originalCustomer: card.querySelector(".editOriginal").value.trim(),
+      };
+      if (!updates.name || !updates.phone || !updates.address || !updates.description || !updates.originalCustomer) {
+        alert("שם, טלפון, כתובת, תיאור התקלה, ולקוח מקורי הם שדות חובה.");
+        return;
+      }
+      managerUpdateDetails(b.dataset.id, updates, state.currentUser.name);
     };
   });
 
@@ -803,7 +1241,7 @@ window.addEventListener("error", (e) => {
   if (app && !app.innerHTML.trim()) {
     app.innerHTML = `
       <div style="max-width:480px; margin:60px auto; text-align:center; padding:0 20px; font-family:sans-serif">
-        <div style="font-size:32px; margin-bottom:12px">⚠️</div>
+        <div style="font-size:34px; margin-bottom:12px">⚠️</div>
         <h2>שגיאה בטעינת האפליקציה</h2>
         <p style="color:#64748b">${(e.message || e.error || "שגיאה לא ידועה").toString()}</p>
       </div>
