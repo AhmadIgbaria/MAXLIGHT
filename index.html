@@ -4,67 +4,212 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מערכת ניהול תקלות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: "Segoe UI", Arial, sans-serif; background:#f8fafc; color:#0f172a; }
-  header { background:#0f172a; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
-  .brand { display:flex; align-items:center; gap:12px; }
-  .brand .icon { width:36px; height:36px; border-radius:8px; background:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:20px; }
-  .brand h1 { margin:0; font-size:19px; }
-  .brand p { margin:0; font-size:13px; color:#94a3b8; }
-  .logout-btn { display:flex; align-items:center; gap:6px; font-size:14px; color:#cbd5e1; background:#1e293b; border:none; border-radius:999px; padding:6px 12px; cursor:pointer; }
-  .logout-btn:hover { background:#334155; color:#fff; }
-  nav { background:#fff; border-bottom:1px solid #e2e8f0; padding:0 24px; display:flex; gap:4px; }
-  nav button { display:flex; align-items:center; gap:8px; padding:12px 16px; font-size:16px; font-weight:500; border:none; background:none; border-bottom:2px solid transparent; color:#64748b; cursor:pointer; }
-  nav button.active { border-color:#f59e0b; color:#0f172a; }
-  nav button:hover:not(.active) { color:#1e293b; }
-  main { padding:24px; max-width:900px; margin:0 auto; }
-  .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px; }
-  .field { display:block; margin-bottom:12px; }
-  .field span.label { display:block; font-size:14px; font-weight:500; color:#475569; margin-bottom:4px; }
-  .input, select, input[type=text], input[type=date], input[type=password], textarea {
-    width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; font-size:16px; outline:none; background:#fff; font-family:inherit;
+  :root {
+    --navy: #0f172a;
+    --navy-2: #1c2c4a;
+    --amber: #f59e0b;
+    --amber-dark: #d97706;
+    --bg: #f3f4f8;
+    --surface: #ffffff;
+    --border: #e7e9f0;
+    --border-strong: #d7dae4;
+    --text: #10172a;
+    --muted: #64748b;
+    --light: #98a2b3;
+    --success: #16a34a;
+    --success-bg: #ecfdf5;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --radius-lg: 14px;
+    --radius-md: 10px;
+    --shadow-sm: 0 1px 2px rgba(16,23,42,0.04), 0 1px 6px rgba(16,23,42,0.04);
+    --shadow-md: 0 4px 16px rgba(16,23,42,0.08);
   }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin:0; font-family:"Rubik", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Arial, sans-serif;
+    background: radial-gradient(1200px 500px at 100% -10%, #fef3e2 0%, transparent 55%),
+                radial-gradient(1000px 500px at -10% 0%, #eef2ff 0%, transparent 50%),
+                var(--bg);
+    color: var(--text); line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  ::selection { background: #fde68a; color:#0f172a; }
+  a { color: inherit; }
+  button, input, select, textarea { font-family: inherit; }
+  button { transition: background-color .15s ease, box-shadow .15s ease, transform .05s ease, color .15s ease, border-color .15s ease; }
+  button:active { transform: translateY(1px); }
+  h1, h2, h3 { font-weight:800; letter-spacing:-.015em; }
+
+  header {
+    background: linear-gradient(180deg, var(--navy) 0%, #0c1424 100%);
+    color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 20px rgba(0,0,0,0.25);
+    position: sticky; top:0; z-index:20; overflow:hidden;
+  }
+  header::before {
+    content:""; position:absolute; right:-40px; top:-90px; width:240px; height:240px; border-radius:999px;
+    background: radial-gradient(circle, rgba(245,158,11,0.35) 0%, rgba(245,158,11,0) 70%); pointer-events:none;
+  }
+  .brand { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
+  .brand .icon {
+    width:52px; height:52px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; box-shadow:0 0 0 3px rgba(255,255,255,0.12), 0 0 22px rgba(245,158,11,0.55), 0 3px 10px rgba(0,0,0,0.4); flex-shrink:0;
+  }
+  .brand .icon img { width:100%; height:100%; object-fit:cover; }
+  .brand h1 { margin:0; font-size:20px; font-weight:800; letter-spacing:-.01em; }
+  .brand p { margin:2px 0 0; font-size:12.5px; color:#a9b3c9; }
+  .logout-btn {
+    display:flex; align-items:center; gap:6px; font-size:13.5px; color:#cbd5e1; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1); border-radius:999px; padding:7px 14px; cursor:pointer;
+  }
+  .logout-btn:hover { background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.2); }
+
+  nav {
+    background: #fff;
+    border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:4px;
+  }
+  nav button {
+    display:flex; align-items:center; gap:8px; padding:13px 18px; font-size:15.5px; font-weight:600;
+    border:none; background:none; border-bottom:2.5px solid transparent; color:var(--muted); cursor:pointer;
+  }
+  nav button.active { border-color: var(--amber); color: var(--text); box-shadow: 0 6px 10px -8px rgba(245,158,11,0.8); }
+  nav button:hover:not(.active) { color: var(--text); background: rgba(15,23,42,0.03); }
+
+  main { padding:28px 24px 60px; max-width:920px; margin:0 auto; }
+
+  .card {
+    background: var(--surface); border:1px solid var(--border); border-radius: var(--radius-lg);
+    padding:18px; margin-bottom:14px; box-shadow: var(--shadow-sm); transition: box-shadow .18s ease, border-color .18s ease;
+  }
+  .card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+
+  .field { display:block; margin-bottom:14px; }
+  .field span.label { display:block; font-size:13.5px; font-weight:600; color:#3d4657; margin-bottom:5px; }
+
+  .input, select, input[type=text], input[type=date], input[type=password], textarea {
+    width:100%; border:1.5px solid var(--border); border-radius: var(--radius-md); padding:10px 13px;
+    font-size:15.5px; outline:none; background:#fff; font-family:inherit; color:var(--text);
+    transition: border-color .15s ease, box-shadow .15s ease; min-height:44px;
+  }
+  select { cursor:pointer; }
   textarea { min-height:90px; resize:vertical; }
-  .input:focus, select:focus, textarea:focus { border-color:#94a3b8; }
-  .btn-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#0f172a; color:#fff; border:none; border-radius:8px; padding:10px; font-size:16px; font-weight:500; cursor:pointer; }
-  .btn-primary:hover { background:#1e293b; }
-  .btn-amber { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:6px 16px; font-size:16px; font-weight:500; cursor:pointer; }
-  .btn-amber:hover { background:#f59e0b; }
-  .btn-dark-sm { background:#0f172a; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:14px; font-weight:500; cursor:pointer; }
-  .btn-disabled { background:#f1f5f9; color:#94a3b8; border:none; border-radius:8px; padding:6px 14px; font-size:14px; cursor:not-allowed; }
-  .badge { font-size:13px; font-weight:500; padding:3px 10px; border-radius:999px; border:1px solid; }
+  .input:focus, select:focus, textarea:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+  input[type=file] { padding:8px 0; border:none; font-size:14px; }
+
+  .btn-primary {
+    width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
+    background: linear-gradient(180deg, var(--navy) 0%, #0c1424 100%); color:#fff; border:none;
+    border-radius: var(--radius-md); padding:12px; font-size:15.5px; font-weight:600; cursor:pointer;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.25);
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+
+  .btn-amber {
+    background: linear-gradient(180deg, #fbbf24, var(--amber)); color:#1c1305; border:none; border-radius: var(--radius-md);
+    padding:9px 18px; font-size:15px; font-weight:700; cursor:pointer; box-shadow: 0 2px 6px rgba(245,158,11,0.35);
+  }
+  .btn-amber:hover { filter: brightness(1.06); }
+
+  .btn-dark-sm {
+    background: var(--navy); color:#fff; border:none; border-radius: var(--radius-md);
+    padding:8px 15px; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .btn-dark-sm:hover { background: var(--navy-2); }
+  .btn-disabled { background:#eef0f4; color:#a4acbb; border:none; border-radius: var(--radius-md); padding:8px 15px; font-size:13.5px; cursor:not-allowed; }
+
+  .badge {
+    font-size:12.5px; font-weight:700; padding:4px 12px 4px 10px; border-radius:999px; border:1px solid;
+    display:inline-flex; align-items:center; gap:6px; letter-spacing:.01em;
+  }
+  .badge::before { content:""; width:6px; height:6px; border-radius:999px; background:currentColor; display:block; }
   .b-open { background:#fef3c7; color:#92400e; border-color:#fde68a; }
   .b-assigned { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
   .b-progress { background:#e0e7ff; color:#3730a3; border-color:#c7d2fe; }
   .b-closed { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
   .b-rejected { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
-  .muted { color:#64748b; font-size:14px; }
-  .light { color:#94a3b8; }
-  .pill-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-  .pill { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:14px; font-weight:500; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; }
-  .pill.active { background:#0f172a; color:#fff; border-color:#0f172a; }
-  .empty { text-align:center; padding:36px; font-size:15px; color:#94a3b8; border:1px dashed #e2e8f0; border-radius:12px; }
-  table { width:100%; border-collapse:collapse; font-size:15px; }
-  thead { background:#f8fafc; color:#64748b; font-size:14px; }
-  th, td { text-align:right; padding:8px 10px; white-space:nowrap; }
-  tbody tr { border-top:1px solid #f1f5f9; cursor:pointer; }
-  tbody tr:hover { background:#f8fafc; }
+
+  .muted { color: var(--muted); font-size:14px; }
+  .light { color: var(--light); }
+
+  .pill-row { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .pill {
+    display:flex; align-items:center; gap:6px; padding:8px 16px; border-radius:999px; font-size:14px; font-weight:600;
+    border:1.5px solid var(--border); background:#fff; color:#3d4657; cursor:pointer;
+  }
+  .pill:hover:not(.active) { border-color: var(--border-strong); background:#f8f9fc; }
+  .pill.active { background: var(--navy); color:#fff; border-color: var(--navy); box-shadow: 0 2px 6px rgba(15,23,42,0.25); }
+
+  .empty {
+    text-align:center; padding:48px 20px; font-size:15px; color: var(--light);
+    border:1.5px dashed var(--border-strong); border-radius: var(--radius-lg); background: rgba(255,255,255,0.5);
+  }
+  .empty::before { content:"🗂️"; display:block; font-size:34px; margin-bottom:12px; filter:grayscale(0.3); opacity:0.8; }
+
+  table { width:100%; border-collapse:collapse; font-size:14.5px; }
+  thead { background:#f8f9fc; color: var(--muted); font-size:13px; text-transform:none; }
+  th { font-weight:700; }
+  th, td { text-align:right; padding:10px 12px; white-space:nowrap; }
+  tbody tr { border-top:1px solid #f1f2f7; cursor:pointer; transition: background-color .1s ease; }
+  tbody tr:hover { background:#f8f9fc; }
   .detail-row td { white-space:normal; cursor:default; }
-  .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 20px; font-size:14px; color:#475569; }
-  .row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; }
+  .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 22px; font-size:14px; color:#3d4657; }
+
+  .row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
   .row label { font-size:14px; }
-  .row .label { display:block; color:#64748b; margin-bottom:4px; }
-  img.thumb { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:8px; }
-  .notice { display:flex; align-items:center; gap:8px; font-size:15px; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
-  .notice-ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
-  .notice-err { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
-  .login-box { max-width:360px; margin:0 auto; }
-  .login-icon { width:44px; height:44px; border-radius:999px; background:#0f172a; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:22px; }
-  .hint { margin-top:14px; font-size:13px; color:#94a3b8; background:#f1f5f9; border-radius:8px; padding:10px; line-height:1.6; }
+  .row .label { display:block; color: var(--muted); margin-bottom:5px; font-weight:600; font-size:13.5px; }
+
+  img.thumb {
+    width:96px; height:96px; object-fit:cover; border-radius: var(--radius-md); border:1px solid var(--border);
+    margin-bottom:8px; cursor:zoom-in; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  img.thumb:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(15,23,42,0.18); }
+
+  .notice { display:flex; align-items:center; gap:8px; font-size:14.5px; border-radius: var(--radius-md); padding:10px 14px; margin-bottom:14px; font-weight:500; animation: slideInDown .25s ease; }
+  .notice-ok { background: var(--success-bg); color:#047857; border:1px solid #a7f3d0; }
+  .notice-err { background: var(--danger-bg); color:#b91c1c; border:1px solid #fecaca; }
+
+  @keyframes fadeInUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes slideInDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
+  .card { animation: fadeInUp .28s ease; }
+
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d7dae4; border-radius:999px; border:2px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #b8bdcc; background-clip:padding-box; }
+  html { scrollbar-width: thin; scrollbar-color: #d7dae4 transparent; }
+
+  .login-box { max-width:380px; margin:40px auto 0; }
+  .login-icon {
+    width:52px; height:52px; border-radius:999px; background: linear-gradient(180deg, var(--navy), #0c1424);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:22px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.3), 0 0 22px rgba(245,158,11,0.35);
+  }
+  .hint { margin-top:16px; font-size:12.5px; color: var(--light); background:#f4f5f9; border-radius: var(--radius-md); padding:12px 14px; line-height:1.7; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .wizBtn { transition: border-color .15s ease, background-color .15s ease, transform .1s ease, box-shadow .15s ease; }
+  .wizBtn:hover { border-color: var(--amber) !important; background: #fffbeb !important; }
+  .wizBtn:active { transform: scale(0.98); }
+  .section-title {
+    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color: var(--muted);
+    margin:22px 0 10px; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .section-title:first-child { margin-top:2px; }
+  .section-title::before { content:""; width:3px; height:14px; border-radius:3px; background: var(--amber); display:block; }
+
+  @media (max-width: 640px) {
+    main { padding:18px 14px 50px; }
+    header { padding:12px 16px; }
+    nav { padding:0 10px; }
+    nav button { padding:12px 12px; font-size:14px; }
+    .grid2, .detail-grid { grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body>
@@ -125,6 +270,10 @@ function technicianEmail(name) {
   const u = state.users.find(x => x.role === "technician" && x.name === name);
   return u ? u.email : null;
 }
+function managerEmails() {
+  const emails = state.users.filter(u => u.role === "manager" && u.email && u.email.trim()).map(u => u.email);
+  return emails.length ? emails : (EMAIL_CONFIG.MANAGER_EMAIL && !EMAIL_CONFIG.MANAGER_EMAIL.includes("PASTE") ? [EMAIL_CONFIG.MANAGER_EMAIL] : []);
+}
 
 function nowStr() {
   return new Date().toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
@@ -138,6 +287,31 @@ function fmtNum(n) { return "#" + String(n).padStart(4, "0"); }
 function esc(s) {
   if (s === null || s === undefined) return "";
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function toCSVValue(v) {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function exportTicketsCSV(tickets) {
+  const headers = ["מספר פנייה","סטטוס","שם לקוח","טלפון","עיר","כתובת","תיאור","מק\"ט","סוכן","לקוח סופי","טכנאי","תאריך טיפול","נפתחה","הערת טכנאי","הערת סוכן","הערת מנהל"];
+  const rows = tickets.map(t => [
+    fmtNum(t.ticketNumber), t.status, t.name, t.phone, t.city || "", t.address, t.description,
+    t.sku || "", t.agent || "", t.originalCustomer, t.technician || "", t.treatmentDate || "",
+    t.createdAt, t.technicianNotes || "", t.agentNotes || "", t.managerNotes || "",
+  ]);
+  const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(toCSVValue).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "פניות_" + todayISO() + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* ============================================================
@@ -206,6 +380,8 @@ const AC_ISSUES = {
 const LIGHT_PROBLEMS = ["לא נדלק בכלל", "מקצר את החשמל", "מהבהב / מרצד", "אור חלש מאוד", "רעש של זמזום מהמנורה", "אחר"];
 const LIGHT_TYPES = ["נורת לד (LED)", "נורה רגילה / הברגה (להט / הלוגן)", "פס לדים / ספוטים"];
 const LIGHT_COLORS = ["3000K (אור חם)", "4000K (אור ניטרלי)", "6000K (אור קר)", "CCT (גוון מתחלף)", "RGB (צבעוני)"];
+
+const CITIES = ["אום אל-פחם", "אופקים", "אור יהודה", "אור עקיבא", "אילת", "אלעד", "אריאל", "אשדוד", "אשקלון", "באקה אל-גרבייה", "באר שבע", "בית שאן", "בית שמש", "ביתר עילית", "בני ברק", "בת ים", "גבעת שמואל", "גבעתיים", "דימונה", "הוד השרון", "הרצליה", "חדרה", "חולון", "חיפה", "טבריה", "טייבה", "טירה", "טירת כרמל", "טמרה", "יבנה", "יהוד-מונוסון", "יקנעם עילית", "ירושלים", "כפר יונה", "כפר סבא", "כפר קאסם", "כרמיאל", "לוד", "מגדל העמק", "מודיעין-מכבים-רעות", "מודיעין עילית", "מעלה אדומים", "מעלות-תרשיחא", "נהריה", "נוף הגליל", "נס ציונה", "נצרת", "נשר", "נתיבות", "נתניה", "סח'נין", "עכו", "עפולה", "עראבה", "ערד", "פתח תקווה", "צפת", "קלנסווה", "קריית אונו", "קריית אתא", "קריית ביאליק", "קריית גת", "קריית ים", "קריית מוצקין", "קריית מלאכי", "קריית שמונה", "ראש העין", "ראשון לציון", "רהט", "רחובות", "רמלה", "רמת גן", "רמת השרון", "רעננה", "שדרות", "שפרעם", "תל אביב-יפו", "אחר"];
 
 function blankWizard() {
   return {
@@ -440,7 +616,10 @@ let state = {
   apiError: null,
   busy: false,
   wizard: null,
+  statusCheckResults: undefined,
+  statusCheckError: "",
   editingDetailsTicketId: null,
+  expandedTicketAuditId: null,
 };
 state.wizard = blankWizard();
 
@@ -452,7 +631,7 @@ function rowToTicket(r) {
   return {
     id: r.id,
     ticketNumber: r.ticket_number,
-    name: r.name || "", phone: r.phone || "", address: r.address || "", description: r.description || "",
+    name: r.name || "", phone: r.phone || "", address: r.address || "", city: r.city || "", description: r.description || "",
     sku: r.sku || "", agent: r.agent || "", originalCustomer: r.original_customer || "",
     image: r.image || null,
     status: r.status,
@@ -461,6 +640,8 @@ function rowToTicket(r) {
     createdAt: fmtDateTime(r.created_at),
     technicianNotes: r.technician_notes || "",
     technicianImage: r.technician_image || null,
+    agentNotes: r.agent_notes || "",
+    managerNotes: r.manager_notes || "",
   };
 }
 function rowToAudit(r) {
@@ -524,23 +705,26 @@ async function submitTicket(form) {
   state.busy = true; render();
   try {
     const { data, error } = await sb.from("tickets").insert({
-      name: form.name, phone: form.phone, address: form.address, description: form.description,
+      name: form.name, phone: form.phone, address: form.address, city: form.city, description: form.description,
       sku: form.sku, agent: form.agent, original_customer: form.originalCustomer,
       image: form.image, status: "פתוחה",
     }).select().single();
     if (error) throw error;
     await refreshState();
     state.sentNotice = true;
-    sendEmailNotification(
-      EMAIL_CONFIG.MANAGER_EMAIL,
-      "פנייה חדשה נפתחה " + fmtNum(data.ticket_number),
-      "נפתחה פנייה חדשה מאת " + form.name + " (" + form.phone + ").\nתיאור: " + form.description
-    );
+    state.lastTicketNumber = data.ticket_number;
+    managerEmails().forEach(email => {
+      sendEmailNotification(
+        email,
+        "פנייה חדשה נפתחה " + fmtNum(data.ticket_number),
+        "נפתחה פנייה חדשה מאת " + form.name + " (" + form.phone + ").\nתיאור: " + form.description
+      );
+    });
   } catch (e) {
     alert("שגיאה בשליחת הפנייה: " + (e.message || e));
   }
   state.busy = false; render();
-  setTimeout(() => { state.sentNotice = false; render(); }, 3500);
+  setTimeout(() => { state.sentNotice = false; render(); }, 5000);
 }
 
 async function insertAudit(ticketId, ticketNumber, performedBy, changeType, oldValue, newValue) {
@@ -582,8 +766,8 @@ async function managerUpdateTicket(ticketId, date, status, technician, managerNa
   state.busy = false; render();
 }
 
-const DETAIL_FIELD_LABELS = { name: "שם לקוח", phone: "טלפון", address: "כתובת", description: "תיאור תקלה", sku: 'מק"ט', agent: "סוכן", originalCustomer: "לקוח מקורי" };
-const DETAIL_FIELD_DB_KEYS = { name: "name", phone: "phone", address: "address", description: "description", sku: "sku", agent: "agent", originalCustomer: "original_customer" };
+const DETAIL_FIELD_LABELS = { name: "שם לקוח", phone: "טלפון", city: "עיר", address: "כתובת", description: "תיאור תקלה", sku: 'מק"ט', agent: "סוכן", originalCustomer: "לקוח מקורי" };
+const DETAIL_FIELD_DB_KEYS = { name: "name", phone: "phone", city: "city", address: "address", description: "description", sku: "sku", agent: "agent", originalCustomer: "original_customer" };
 
 async function managerUpdateDetails(ticketId, updates, managerName) {
   state.busy = true; render();
@@ -605,6 +789,38 @@ async function managerUpdateDetails(ticketId, updates, managerName) {
     await refreshState();
   } catch (e) { alert("שגיאה בעדכון פרטים: " + (e.message || e)); }
   state.editingDetailsTicketId = null;
+  state.busy = false; render();
+}
+
+async function addAgentNote(ticketId, note, agentName) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    const oldVal = t.agentNotes || "—";
+    const newVal = note || "—";
+    if (oldVal !== newVal) {
+      await insertAudit(ticketId, t.ticketNumber, agentName, "הערת סוכן", oldVal, newVal);
+      const { error } = await sb.from("tickets").update({ agent_notes: note }).eq("id", ticketId);
+      if (error) throw error;
+      await refreshState();
+    }
+  } catch (e) { alert("שגיאה בשמירת הערה: " + (e.message || e)); }
+  state.busy = false; render();
+}
+
+async function addManagerNote(ticketId, note, managerName) {
+  state.busy = true; render();
+  try {
+    const t = findTicket(ticketId);
+    const oldVal = t.managerNotes || "—";
+    const newVal = note || "—";
+    if (oldVal !== newVal) {
+      await insertAudit(ticketId, t.ticketNumber, managerName, "הערת מנהל", oldVal, newVal);
+      const { error } = await sb.from("tickets").update({ manager_notes: note }).eq("id", ticketId);
+      if (error) throw error;
+      await refreshState();
+    }
+  } catch (e) { alert("שגיאה בשמירת הערה: " + (e.message || e)); }
   state.busy = false; render();
 }
 
@@ -650,7 +866,7 @@ function render() {
   app.innerHTML = `
     <header>
       <div class="brand">
-        <div class="icon">🔧</div>
+        <div class="icon"><img src="data:image/jpeg;base64,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" alt="IMAX Light"></div>
         <div><h1>מערכת ניהול תקלות</h1><p>לקוחות · מנהל לקוחות · טכנאים</p></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px">
@@ -660,7 +876,8 @@ function render() {
     </header>
     <nav>
       <button data-tab="customer" class="${state.tab==='customer'?'active':''}">👤 לקוח</button>
-      <button data-tab="staff" class="${state.tab==='staff'?'active':''}">${state.currentUser ? (state.currentUser.role==='manager'?'🧑‍💼 מנהל לקוחות':'🔧 טכנאי') : '🔒 כניסת צוות'}</button>
+      <button data-tab="status" class="${state.tab==='status'?'active':''}">🔍 בדיקת סטטוס</button>
+      <button data-tab="staff" class="${state.tab==='staff'?'active':''}">${state.currentUser ? (state.currentUser.role==='manager'?'🧑‍💼 מנהל לקוחות':(state.currentUser.role==='technician'?'🔧 טכנאי':'🤝 סוכן')) : '🔒 כניסת צוות'}</button>
     </nav>
     <main id="main"></main>
   `;
@@ -678,9 +895,11 @@ function render() {
 
   const main = document.getElementById("main");
   if (state.tab === "customer") main.innerHTML = customerFormHtml();
+  else if (state.tab === "status") main.innerHTML = statusCheckHtml();
   else if (state.tab === "staff" && !state.currentUser) main.innerHTML = loginHtml();
   else if (state.tab === "staff" && state.currentUser.role === "manager") main.innerHTML = managerHtml();
   else if (state.tab === "staff" && state.currentUser.role === "technician") main.innerHTML = technicianHtml();
+  else if (state.tab === "staff" && state.currentUser.role === "agent") main.innerHTML = agentHtml();
 
   wireEvents();
 
@@ -695,19 +914,69 @@ function render() {
   }
 }
 
+function ticketAuditToggleHtml(t) {
+  const isOpen = state.expandedTicketAuditId === t.id;
+  const entries = state.auditLog.filter(a => a.ticketId === t.id);
+  let html = `<button type="button" class="btn-dark-sm ticketAuditToggle" data-id="${t.id}" style="background:#f1f5f9; color:#334155; margin-bottom:8px">🕘 יומן שינויים (${entries.length})</button>`;
+  if (isOpen) {
+    if (entries.length === 0) {
+      html += `<div class="empty" style="padding:16px; margin-bottom:8px">אין שינויים רשומים עדיין.</div>`;
+    } else {
+      html += `<div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:8px">
+        <table style="width:100%; font-size:13px">
+          <thead class="light" style="background:#f8fafc">
+            <tr><th style="text-align:right; padding:6px 10px">בוצע על ידי</th><th style="text-align:right; padding:6px 10px">סוג שינוי</th><th style="text-align:right; padding:6px 10px">מ</th><th style="text-align:right; padding:6px 10px">ל</th><th style="text-align:right; padding:6px 10px">מתי</th></tr>
+          </thead>
+          <tbody>
+            ${entries.map(a => `<tr style="border-top:1px solid #f1f5f9">
+              <td style="padding:6px 10px; font-weight:500">${esc(a.performedBy)}</td>
+              <td style="padding:6px 10px">${esc(a.changeType)}</td>
+              <td style="padding:6px 10px" class="light">${esc(a.oldValue)}</td>
+              <td style="padding:6px 10px">${esc(a.newValue)}</td>
+              <td style="padding:6px 10px" class="light">${esc(a.changedAt)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+    }
+  }
+  return html;
+}
+
 function miniField(label, value) {
   return `<div><div class="light" style="font-size:11px; margin-bottom:2px">${esc(label)}</div><div style="font-size:15px; font-weight:600; color:#0f172a">${esc(value) || "—"}</div></div>`;
 }
 
-function waLink(phone, ticketNumber) {
-  if (!phone) return null;
+function toWaDigits(phone) {
   let digits = String(phone).replace(/\D/g, "");
   if (!digits) return null;
   if (digits.startsWith("0")) digits = "972" + digits.slice(1);
   else if (!digits.startsWith("972")) digits = "972" + digits;
+  return digits;
+}
+function waLink(phone, ticketNumber) {
+  if (!phone) return null;
+  const digits = toWaDigits(phone);
+  if (!digits) return null;
   const waMessage = "שלום,\nמדבר הטכנאי. אני בדרך אליך לטיפול בתקלה.\nאשמח אם תשלח לי את המיקום המדויק שלך (אפשר לשלוח מיקום ב-Waze), כדי שאוכל להגיע אליך בקלות.\nתודה!";
   const text = "?text=" + encodeURIComponent(waMessage);
   return "https://wa.me/" + digits + text;
+}
+function waSurveyLink(phone, name) {
+  if (!phone) return null;
+  const digits = toWaDigits(phone);
+  if (!digits) return null;
+  const greeting = name ? "שלום " + name + "," : "שלום,";
+  const waMessage = greeting + "\nהטיפול בתקלה שלך הושלם 🙂\nנשמח לשמוע איך היה השירות שקיבלת — הטכנאי, זמן ההגעה, ואיכות הטיפול.\nהמשוב שלך חשוב לנו מאוד, תודה!";
+  const text = "?text=" + encodeURIComponent(waMessage);
+  return "https://wa.me/" + digits + text;
+}
+
+function surveyButtonHtml(t) {
+  if (t.status !== "סגורה") return "";
+  const link = waSurveyLink(t.phone, t.name);
+  if (!link) return "";
+  return `<a href="${link}" target="_blank" rel="noopener" class="btn-dark-sm" style="display:inline-flex; align-items:center; gap:4px; background:#16a34a; color:#fff; text-decoration:none; margin-bottom:8px">📊 שלח סקר שביעות רצון</a>`;
 }
 
 function ticketFieldsBlock(t) {
@@ -727,7 +996,31 @@ function ticketFieldsBlock(t) {
     if (t.technicianImage) html += `<img class="thumb" src="${t.technicianImage}" alt="תמונת טכנאי" style="margin-bottom:0">`;
     html += `</div>`;
   }
+  if (t.agentNotes) {
+    html += `<div style="margin-top:4px; margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:8px">`;
+    html += `<div class="light" style="font-size:13px; margin-bottom:4px">הערת סוכן:</div>`;
+    html += `<div style="font-size:15px">${esc(t.agentNotes)}</div>`;
+    html += `</div>`;
+  }
+  if (t.managerNotes) {
+    html += `<div style="margin-top:4px; margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:8px">`;
+    html += `<div class="light" style="font-size:13px; margin-bottom:4px">הערת מנהל:</div>`;
+    html += `<div style="font-size:15px">${esc(t.managerNotes)}</div>`;
+    html += `</div>`;
+  }
   return html;
+}
+
+function dueBadgeHtml(t) {
+  if (!t.treatmentDate || t.status === "סגורה" || t.status === "נדחתה") return "";
+  const today = todayISO();
+  if (t.treatmentDate < today) {
+    return `<span class="badge" style="background:#fee2e2; color:#991b1b; border-color:#fecaca">⚠ באיחור</span>`;
+  }
+  if (t.treatmentDate === today) {
+    return `<span class="badge" style="background:#fef3c7; color:#92400e; border-color:#fde68a">📅 היום</span>`;
+  }
+  return "";
 }
 
 function cardHeader(t) {
@@ -743,9 +1036,49 @@ function cardHeader(t) {
         ${miniField("מספר פנייה", fmtNum(t.ticketNumber))}
         ${miniField("לקוח", t.name)}
         <div><div class="light" style="font-size:11px; margin-bottom:2px">טלפון</div>${phoneHtml}</div>
+        ${miniField("עיר", t.city)}
         ${miniField("כתובת", t.address)}
       </div>
-      <span class="badge ${STATUS_BADGE[t.status]||''}">${t.status}</span>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
+        <span class="badge ${STATUS_BADGE[t.status]||''}">${t.status}</span>
+        ${dueBadgeHtml(t)}
+      </div>
+    </div>
+  `;
+}
+
+function statusCheckHtml() {
+  const results = state.statusCheckResults;
+  const resultCardHtml = (r) => `
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px">
+        <span style="font-size:17px; font-weight:700">${fmtNum(r.ticketNumber)}</span>
+        <span class="badge ${STATUS_BADGE[r.status]||''}">${r.status}</span>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:14px 24px; margin-bottom:10px">
+        ${miniField("נפתחה", r.createdAt)}
+        ${miniField("טכנאי", r.technician || "טרם שויך")}
+        ${miniField("תאריך טיפול משוער", r.treatmentDate || "טרם נקבע")}
+      </div>
+      <div class="light" style="font-size:11px; margin-bottom:2px">תיאור התקלה</div>
+      <div style="font-size:15px">${esc(r.description)}</div>
+    </div>
+  `;
+  return `
+    <div class="login-box">
+      <div style="text-align:center; margin-bottom:20px">
+        <div class="login-icon">🔍</div>
+        <h2 style="margin:0">בדיקת סטטוס פנייה</h2>
+        <p class="muted">מלא/י מספר פנייה, טלפון, או שניהם</p>
+      </div>
+      <div class="card">
+        ${state.statusCheckError ? `<div class="notice notice-err">⚠ ${esc(state.statusCheckError)}</div>` : ""}
+        <label class="field"><span class="label">מספר פנייה (לא חובה)</span><input class="input" id="sc_number" placeholder="לדוגמה: 7 או 0007"></label>
+        <label class="field"><span class="label">טלפון (לא חובה)</span><input class="input" id="sc_phone" placeholder="050-0000000"></label>
+        <button class="btn-primary" id="statusCheckBtn">🔍 בדיקה</button>
+      </div>
+      ${results && results.length > 0 ? results.map(resultCardHtml).join("") : ""}
+      ${results && results.length === 0 ? `<div class="empty" style="margin-top:14px">לא נמצאה פנייה תואמת.</div>` : ""}
     </div>
   `;
 }
@@ -753,27 +1086,46 @@ function cardHeader(t) {
 function customerFormHtml() {
   return `
     <div style="max-width:480px">
-      <h2 style="margin-bottom:4px">פתיחת פנייה</h2>
+      <h2 style="margin-bottom:4px; display:flex; align-items:center; gap:8px">
+        <span style="width:8px; height:8px; border-radius:999px; background:var(--amber); box-shadow:0 0 10px rgba(245,158,11,0.7); display:inline-block"></span>
+        פתיחת פנייה
+      </h2>
       <p class="muted" style="margin-bottom:16px">מלא/י את הפרטים</p>
-      ${state.sentNotice ? `<div class="notice notice-ok">✓ הפנייה נשלחה בהצלחה, מנהל הלקוחות יטפל בה בקרוב.</div>` : ""}
+      ${state.sentNotice ? `<div class="notice notice-ok">✓ הפנייה ${fmtNum(state.lastTicketNumber)} נשלחה בהצלחה — מנהל הלקוחות יטפל בה בקרוב.</div>` : ""}
       <div class="card">
+        <div class="section-title">פרטי קשר</div>
         <label class="field"><span class="label">שם מלא <span style="color:#dc2626">*</span></span><input class="input" id="f_name" placeholder="לדוגמה: רונית ישראלי"></label>
         <label class="field"><span class="label">טלפון <span style="color:#dc2626">*</span></span><input class="input" id="f_phone" placeholder="050-0000000"></label>
-        <label class="field"><span class="label">כתובת <span style="color:#dc2626">*</span></span><input class="input" id="f_address" placeholder="עיר, רחוב ומספר"></label>
+        <label class="field"><span class="label">עיר <span style="color:#dc2626">*</span></span>
+          <select id="f_city">
+            <option value="">בחר עיר</option>
+            ${CITIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field"><span class="label">כתובת <span style="color:#dc2626">*</span></span><input class="input" id="f_address" placeholder="רחוב ומספר"></label>
+
+        <div class="section-title">התקלה</div>
         <label class="field"><span class="label">תיאור התקלה <span style="color:#dc2626">*</span></span></label>
         <div id="wizardContainer" style="margin-bottom:14px">${wizardHtml()}</div>
-        <label class="field"><span class="label">פרטים נוספים (לא חובה)</span><textarea id="f_extra_notes" placeholder="מידע נוסף אם יש..."></textarea></label>
+        <label class="field"><span class="label">הערות (לא חובה)</span><textarea id="f_extra_notes" placeholder="מידע נוסף אם יש..."></textarea></label>
+
+        <div class="section-title">פרטים נוספים</div>
         <div class="grid2">
           <label class="field"><span class="label">מק"ט</span><input class="input" id="f_sku" placeholder='מק"ט המוצר'></label>
-          <label class="field"><span class="label">סוכן</span><input class="input" id="f_agent" placeholder="שם הסוכן"></label>
+          <label class="field"><span class="label">סוכן</span>
+            <select id="f_agent">
+              <option value="">בחר סוכן</option>
+              ${state.users.filter(u => u.role === "agent").map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join("")}
+            </select>
+          </label>
         </div>
-        <label class="field"><span class="label">לקוח מקורי <span style="color:#dc2626">*</span></span><input class="input" id="f_original" placeholder="הלקוח הסופי"></label>
+        <label class="field"><span class="label">הלקוח הסופי <span style="color:#dc2626">*</span></span><input class="input" id="f_original" placeholder="עבור מי הפנייה"></label>
         <label class="field">
           <span class="label">תמונה</span>
           <input type="file" accept="image/*" id="f_image">
           <div id="imgPreview"></div>
         </label>
-        <p class="light" style="font-size:13px; margin:-4px 0 10px">* שדות חובה</p>
+        <p class="light" style="font-size:13px; margin:18px 0 10px">* שדות חובה</p>
         <button class="btn-primary" id="submitBtn">📤 שליחת פנייה</button>
       </div>
     </div>
@@ -805,8 +1157,11 @@ function managerHtml() {
 
   const search = (state.allSearch || "").trim().toLowerCase();
   const statusFilter = state.allStatusFilter || "all";
+  const cityFilter = state.allCityFilter || "all";
+  const allCities = [...new Set(state.tickets.map(t => t.city).filter(Boolean))].sort();
   let all = state.tickets;
   if (statusFilter !== "all") all = all.filter(t => t.status === statusFilter);
+  if (cityFilter !== "all") all = all.filter(t => t.city === cityFilter);
   if (search) {
     all = all.filter(t => {
       const hay = [fmtNum(t.ticketNumber), t.name, t.phone, t.description, t.sku, t.agent, t.address].join(" ").toLowerCase();
@@ -832,18 +1187,22 @@ function managerHtml() {
             <option value="נדחתה" ${statusFilter==='נדחתה'?'selected':''}>נדחתה</option>
           </select>
         </label>
+        <label><span class="label">סינון לפי עיר</span>
+          <select id="allCitySelect">
+            <option value="all" ${cityFilter==='all'?'selected':''}>כל הערים</option>
+            ${allCities.map(c => `<option value="${esc(c)}" ${cityFilter===c?'selected':''}>${esc(c)}</option>`).join("")}
+          </select>
+        </label>
+        <button type="button" class="btn-dark-sm" id="exportCsvBtn" style="align-self:flex-end">⬇️ ייצוא ל-CSV (${all.length})</button>
       </div>
       ${all.length === 0 ? `<div class="empty">לא נמצאו פניות תואמות.</div>` : all.map(t => allTicketCardHtml(t, technicians)).join("")}
     `;
-  } else if (mTab === "log") {
-    body = auditTableHtml();
   }
 
   return `
     <div class="pill-row">
       <button class="pill ${mTab==='open'?'active':''}" data-mtab="open">📋 פניות פתוחות (${open.length})</button>
       <button class="pill ${mTab==='all'?'active':''}" data-mtab="all">🔧 כל הפניות (${state.tickets.length})</button>
-      <button class="pill ${mTab==='log'?'active':''}" data-mtab="log">🕘 יומן שינויים</button>
       <button class="pill" id="refreshBtn" style="margin-right:auto">🔄 רענון</button>
     </div>
     <div>${body}</div>
@@ -861,6 +1220,10 @@ function assignCardHtml(t, technicians) {
         <label><span class="label">תאריך טיפול</span><input type="date" class="assignDate" value="${todayISO()}"></label>
         <button class="btn-amber assignBtn">שיוך</button>
       </div>
+      <label class="field" style="margin-top:10px"><span class="label">הערה</span><textarea class="mgrNoteInput" placeholder="הוסף הערה...">${esc(t.managerNotes || "")}</textarea></label>
+      <button type="button" class="btn-dark-sm mgrSaveNoteBtn" data-id="${t.id}">💾 שמירת הערה</button>
+      ${surveyButtonHtml(t)}
+      ${ticketAuditToggleHtml(t)}
     </div>
   `;
 }
@@ -872,13 +1235,18 @@ function editDetailsFormHtml(t) {
         <label class="field"><span class="label">שם לקוח</span><input class="input editName" value="${esc(t.name)}"></label>
         <label class="field"><span class="label">טלפון</span><input class="input editPhone" value="${esc(t.phone)}"></label>
       </div>
+      <label class="field"><span class="label">עיר</span>
+        <select class="editCity">
+          ${CITIES.map(c => `<option value="${esc(c)}" ${t.city===c?'selected':''}>${esc(c)}</option>`).join("")}
+        </select>
+      </label>
       <label class="field"><span class="label">כתובת</span><input class="input editAddress" value="${esc(t.address)}"></label>
       <label class="field"><span class="label">תיאור התקלה</span><textarea class="input editDescription">${esc(t.description)}</textarea></label>
       <div class="grid2">
         <label class="field"><span class="label">מק"ט</span><input class="input editSku" value="${esc(t.sku)}"></label>
         <label class="field"><span class="label">סוכן</span><input class="input editAgent" value="${esc(t.agent)}"></label>
       </div>
-      <label class="field"><span class="label">לקוח מקורי</span><input class="input editOriginal" value="${esc(t.originalCustomer)}"></label>
+      <label class="field"><span class="label">הלקוח הסופי</span><input class="input editOriginal" value="${esc(t.originalCustomer)}"></label>
       <div style="display:flex; gap:8px; margin-top:4px">
         <button type="button" class="btn-dark-sm saveDetailsBtn" data-id="${t.id}">💾 שמירת פרטים</button>
         <button type="button" class="btn-dark-sm cancelEditBtn" style="background:#f1f5f9; color:#334155">ביטול</button>
@@ -918,73 +1286,63 @@ function allTicketCardHtml(t, technicians) {
           </label>
           <button class="btn-dark-sm mgrUpdateBtn">עדכון</button>
         </div>` : ""}
+      <label class="field" style="margin-top:10px"><span class="label">הערה</span><textarea class="mgrNoteInput" placeholder="הוסף הערה...">${esc(t.managerNotes || "")}</textarea></label>
+      <button type="button" class="btn-dark-sm mgrSaveNoteBtn" data-id="${t.id}">💾 שמירת הערה</button>
+      ${surveyButtonHtml(t)}
+      ${ticketAuditToggleHtml(t)}
     </div>
   `;
 }
 
-function auditTableHtml() {
-  if (state.auditLog.length === 0) return `<div class="empty">עדיין אין שינויים מתועדים.</div>`;
-  const nums = [...new Set(state.auditLog.map(a=>a.ticketNumber))].sort((a,b)=>a-b);
-  const orderSearch = (state.auditSearch || "").trim().replace(/^#/, "");
-  let filtered = state.auditFilter === "all" ? state.auditLog : state.auditLog.filter(a => a.ticketNumber === Number(state.auditFilter));
-  if (orderSearch) filtered = filtered.filter(a => String(a.ticketNumber).includes(orderSearch) || fmtNum(a.ticketNumber).includes(orderSearch));
-  const sorted = [...filtered].sort((a,b) => a.ticketNumber - b.ticketNumber);
 
-  const rows = sorted.map(a => {
-    const t = findTicket(a.ticketId);
-    const isOpen = state.expandedAudit === a.id;
-    let rowHtml = `
-      <tr data-audit="${a.id}">
-        <td style="font-weight:600">${fmtNum(a.ticketNumber)}</td>
-        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis" title="${esc(t?.description)}">${esc(t?.description)||"—"}</td>
-        <td style="font-weight:500">${esc(a.performedBy)}</td>
-        <td>${esc(a.changeType)}</td>
-        <td class="light">${esc(a.oldValue)}</td>
-        <td>${esc(a.newValue)}</td>
-        <td class="light">${esc(a.changedAt)}</td>
-      </tr>
-    `;
-    if (isOpen && t) {
-      rowHtml += `
-        <tr class="detail-row" style="background:#f8fafc">
-          <td colspan="7">
-            <div class="detail-grid">
-              <div><span class="light">שם לקוח: </span>${esc(t.name)}</div>
-              <div><span class="light">טלפון: </span>${esc(t.phone)}</div>
-              <div><span class="light">כתובת: </span>${esc(t.address)||"—"}</div>
-              <div><span class="light">תיאור: </span>${esc(t.description)}</div>
-              <div><span class="light">סטטוס: </span>${esc(t.status)}</div>
-              <div><span class="light">טכנאי: </span>${esc(t.technician)||"—"}</div>
-              <div><span class="light">תאריך טיפול: </span>${esc(t.treatmentDate)||"—"}</div>
-              <div><span class="light">נפתחה: </span>${esc(t.createdAt)}</div>
-              <div><span class="light">מק"ט: </span>${esc(t.sku)||"—"}</div>
-              <div><span class="light">סוכן: </span>${esc(t.agent)||"—"}</div>
-              <div><span class="light">לקוח מקורי: </span>${esc(t.originalCustomer)||"—"}</div>
-            </div>
-            ${t.image ? `<img class="thumb" style="margin-top:8px" src="${t.image}">` : ""}
-          </td>
-        </tr>
-      `;
-    }
-    return rowHtml;
-  }).join("");
+function agentHtml() {
+  const all = state.tickets.filter(t => t.agent === state.currentUser.name);
+  const refreshBar = `<div class="pill-row"><button class="pill" id="refreshBtn">🔄 רענון</button></div>`;
+  if (all.length === 0) return refreshBar + `<div class="empty">אין פניות המקושרות אליך כרגע.</div>`;
 
-  return `
-    <div class="row" style="margin-bottom:8px">
-      <label style="flex:1; min-width:200px"><span class="label">🔍 חיפוש לפי מספר הזמנה</span><input type="text" id="auditSearchInput" value="${esc(state.auditSearch||'')}" placeholder="לדוגמה: 0007 או 7"></label>
-      <label><span class="label">סינון לפי מספר פנייה</span>
-        <select id="auditFilterSel">
-          <option value="all" ${state.auditFilter==='all'?'selected':''}>הכל</option>
-          ${nums.map(n => `<option value="${n}" ${state.auditFilter==String(n)?'selected':''}>${fmtNum(n)}</option>`).join("")}
+  const statusFilter = state.agentStatusFilter || "all";
+  const mine = statusFilter === "all" ? all : all.filter(t => t.status === statusFilter);
+
+  const filterBar = `
+    <div class="row" style="margin-bottom:14px">
+      <label><span class="label">סינון לפי סטטוס</span>
+        <select id="agentStatusSelect">
+          <option value="all" ${statusFilter==='all'?'selected':''}>הכל</option>
+          <option value="פתוחה" ${statusFilter==='פתוחה'?'selected':''}>פתוחה</option>
+          <option value="משויכת" ${statusFilter==='משויכת'?'selected':''}>משויכת</option>
+          <option value="בטיפול" ${statusFilter==='בטיפול'?'selected':''}>בטיפול</option>
+          <option value="סגורה" ${statusFilter==='סגורה'?'selected':''}>סגורה</option>
+          <option value="נדחתה" ${statusFilter==='נדחתה'?'selected':''}>נדחתה</option>
         </select>
       </label>
     </div>
-    <p class="light" style="font-size:14px; margin-bottom:8px">לחצו על שורה כדי לראות את כל פרטי הפנייה.</p>
-    <div class="card" style="padding:0; overflow:hidden">
-      <table>
-        <thead><tr><th>פנייה #</th><th>פרטי תקלה</th><th>בוצע על ידי</th><th>סוג שינוי</th><th>מ</th><th>ל</th><th>מתי</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+  `;
+
+  const cards = mine.length === 0
+    ? `<div class="empty">לא נמצאו פניות תואמות לסינון.</div>`
+    : mine.map(t => agentCardHtml(t)).join("");
+
+  return refreshBar + filterBar + cards;
+}
+
+function agentCardHtml(t) {
+  const isEditing = state.editingDetailsTicketId === t.id;
+  if (isEditing) {
+    return `<div class="card" data-ticket="${t.id}">${editDetailsFormHtml(t)}</div>`;
+  }
+  return `
+    <div class="card" data-ticket="${t.id}">
+      ${cardHeader(t)}
+      ${ticketFieldsBlock(t)}
+      <div class="muted" style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:8px">
+        <span>נפתחה: ${esc(t.createdAt)}</span>
+        ${t.technician ? `<span>טכנאי: ${esc(t.technician)}</span>` : ""}
+        ${t.treatmentDate ? `<span>📅 תאריך טיפול: ${esc(t.treatmentDate)}</span>` : ""}
+      </div>
+      <button type="button" class="btn-dark-sm editDetailsToggle" data-id="${t.id}" style="background:#f1f5f9; color:#334155; margin-bottom:10px">✏️ עריכת פרטי פנייה</button>
+      <label class="field"><span class="label">הערה</span><textarea class="agentNoteInput" placeholder="הוסף הערה...">${esc(t.agentNotes || "")}</textarea></label>
+      <button type="button" class="btn-dark-sm agentSaveNoteBtn" data-id="${t.id}">💾 שמירת הערה</button>
+      ${ticketAuditToggleHtml(t)}
     </div>
   `;
 }
@@ -996,9 +1354,12 @@ function technicianHtml() {
 
   const statusFilter = state.techStatusFilter || "all";
   const dateFilter = state.techDateFilter || "";
+  const cityFilter = state.techCityFilter || "all";
+  const cities = [...new Set(all.map(t => t.city).filter(Boolean))].sort();
   let mine = all;
   if (statusFilter !== "all") mine = mine.filter(t => t.status === statusFilter);
   if (dateFilter) mine = mine.filter(t => t.treatmentDate === dateFilter);
+  if (cityFilter !== "all") mine = mine.filter(t => t.city === cityFilter);
 
   const filterBar = `
     <div class="row" style="margin-bottom:14px">
@@ -1011,8 +1372,14 @@ function technicianHtml() {
           <option value="נדחתה" ${statusFilter==='נדחתה'?'selected':''}>נדחתה</option>
         </select>
       </label>
+      <label><span class="label">סינון לפי עיר</span>
+        <select id="techCitySelect">
+          <option value="all" ${cityFilter==='all'?'selected':''}>כל הערים</option>
+          ${cities.map(c => `<option value="${esc(c)}" ${cityFilter===c?'selected':''}>${esc(c)}</option>`).join("")}
+        </select>
+      </label>
       <label><span class="label">סינון לפי תאריך טיפול</span><input type="date" id="techDateFilterInput" value="${dateFilter}"></label>
-      ${(statusFilter!=='all' || dateFilter) ? `<button class="btn-dark-sm" id="techFilterClear">נקה סינון</button>` : ""}
+      ${(statusFilter!=='all' || dateFilter || cityFilter!=='all') ? `<button class="btn-dark-sm" id="techFilterClear">נקה סינון</button>` : ""}
     </div>
   `;
 
@@ -1041,6 +1408,7 @@ function technicianHtml() {
         <div class="techImgPreview">${t.technicianImage ? `<img class="thumb" style="margin-top:8px" src="${t.technicianImage}">` : ""}</div>
       </label>
       <button class="btn-dark-sm techSaveBtn">שמירת שינוי</button>
+      <div style="margin-top:10px">${ticketAuditToggleHtml(t)}</div>
     </div>
   `).join("");
 
@@ -1072,6 +1440,7 @@ function wireEvents() {
     submitBtn.onclick = () => {
       const name = document.getElementById("f_name").value.trim();
       const phone = document.getElementById("f_phone").value.trim();
+      const city = document.getElementById("f_city").value;
       const address = document.getElementById("f_address").value.trim();
       const originalCustomer = document.getElementById("f_original").value.trim();
       const extraNotes = document.getElementById("f_extra_notes").value.trim();
@@ -1080,8 +1449,8 @@ function wireEvents() {
         alert("יש להשלים את תיאור התקלה (לבחור קטגוריה ולענות על השאלות) לפני השליחה.");
         return;
       }
-      if (!name || !phone || !address || !originalCustomer) {
-        alert("יש למלא שם, טלפון, כתובת, ולקוח מקורי — שדות אלו חובה.");
+      if (!name || !phone || !city || !address || !originalCustomer) {
+        alert("יש למלא שם, טלפון, עיר, כתובת, ולקוח סופי — שדות חובה.");
         return;
       }
       const description = composedDesc + (extraNotes ? " | הערות: " + extraNotes : "");
@@ -1089,12 +1458,45 @@ function wireEvents() {
       pendingImage = null;
       resetWizard();
       submitTicket({
-        name, phone, address, description, originalCustomer,
+        name, phone, city, address, description, originalCustomer,
         sku: document.getElementById("f_sku").value.trim(),
         agent: document.getElementById("f_agent").value.trim(),
         image: img,
       });
     };
+  }
+
+  // Public status check
+  const statusCheckBtn = document.getElementById("statusCheckBtn");
+  if (statusCheckBtn) {
+    const runCheck = () => {
+      const numRaw = document.getElementById("sc_number").value.trim().replace(/^#/, "");
+      const phoneRaw = document.getElementById("sc_phone").value.trim();
+      const num = numRaw ? parseInt(numRaw, 10) : null;
+      const phoneDigits = phoneRaw.replace(/\D/g, "");
+      if (!num && !phoneDigits) {
+        state.statusCheckError = "יש למלא מספר פנייה, טלפון, או שניהם.";
+        state.statusCheckResults = undefined;
+        render();
+        return;
+      }
+      let matches;
+      if (num && phoneDigits) {
+        matches = state.tickets.filter(t => t.ticketNumber === num && String(t.phone).replace(/\D/g, "").endsWith(phoneDigits.slice(-9)));
+      } else if (num) {
+        matches = state.tickets.filter(t => t.ticketNumber === num);
+      } else {
+        matches = state.tickets.filter(t => String(t.phone).replace(/\D/g, "").endsWith(phoneDigits.slice(-9)));
+      }
+      state.statusCheckError = "";
+      state.statusCheckResults = matches;
+      render();
+    };
+    statusCheckBtn.onclick = runCheck;
+    ["sc_number", "sc_phone"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.onkeydown = (e) => { if (e.key === "Enter") runCheck(); };
+    });
   }
 
   // Login
@@ -1137,6 +1539,24 @@ function wireEvents() {
   if (allSearchInput) allSearchInput.oninput = () => { state.allSearch = allSearchInput.value; render(); };
   const allStatusSelect = document.getElementById("allStatusSelect");
   if (allStatusSelect) allStatusSelect.onchange = () => { state.allStatusFilter = allStatusSelect.value; render(); };
+  const allCitySelect = document.getElementById("allCitySelect");
+  if (allCitySelect) allCitySelect.onchange = () => { state.allCityFilter = allCitySelect.value; render(); };
+  const exportCsvBtn = document.getElementById("exportCsvBtn");
+  if (exportCsvBtn) exportCsvBtn.onclick = () => {
+    const search = (state.allSearch || "").trim().toLowerCase();
+    const statusFilter = state.allStatusFilter || "all";
+    const cityFilter = state.allCityFilter || "all";
+    let list = state.tickets;
+    if (statusFilter !== "all") list = list.filter(t => t.status === statusFilter);
+    if (cityFilter !== "all") list = list.filter(t => t.city === cityFilter);
+    if (search) {
+      list = list.filter(t => {
+        const hay = [fmtNum(t.ticketNumber), t.name, t.phone, t.description, t.sku, t.agent, t.address].join(" ").toLowerCase();
+        return hay.includes(search);
+      });
+    }
+    exportTicketsCSV(list);
+  };
 
   // Assign
   document.querySelectorAll("[data-assign]").forEach(card => {
@@ -1145,6 +1565,34 @@ function wireEvents() {
       const tech = card.querySelector(".assignTech").value;
       const date = card.querySelector(".assignDate").value;
       assignTicket(id, tech, date, state.currentUser.name);
+    };
+  });
+
+  // Agent status filter + notes
+  const agentStatusSelect = document.getElementById("agentStatusSelect");
+  if (agentStatusSelect) agentStatusSelect.onchange = () => { state.agentStatusFilter = agentStatusSelect.value; render(); };
+  document.querySelectorAll(".agentSaveNoteBtn").forEach(b => {
+    b.onclick = () => {
+      const card = b.closest(".card");
+      const note = card.querySelector(".agentNoteInput").value.trim();
+      addAgentNote(b.dataset.id, note, state.currentUser.name);
+    };
+  });
+
+  // Per-ticket audit log toggle
+  document.querySelectorAll(".ticketAuditToggle").forEach(b => {
+    b.onclick = () => {
+      state.expandedTicketAuditId = state.expandedTicketAuditId === b.dataset.id ? null : b.dataset.id;
+      render();
+    };
+  });
+
+  // Manager notes
+  document.querySelectorAll(".mgrSaveNoteBtn").forEach(b => {
+    b.onclick = () => {
+      const card = b.closest(".card");
+      const note = card.querySelector(".mgrNoteInput").value.trim();
+      addManagerNote(b.dataset.id, note, state.currentUser.name);
     };
   });
 
@@ -1157,14 +1605,15 @@ function wireEvents() {
       const updates = {
         name: card.querySelector(".editName").value.trim(),
         phone: card.querySelector(".editPhone").value.trim(),
+        city: card.querySelector(".editCity").value,
         address: card.querySelector(".editAddress").value.trim(),
         description: card.querySelector(".editDescription").value.trim(),
         sku: card.querySelector(".editSku").value.trim(),
         agent: card.querySelector(".editAgent").value.trim(),
         originalCustomer: card.querySelector(".editOriginal").value.trim(),
       };
-      if (!updates.name || !updates.phone || !updates.address || !updates.description || !updates.originalCustomer) {
-        alert("שם, טלפון, כתובת, תיאור התקלה, ולקוח מקורי הם שדות חובה.");
+      if (!updates.name || !updates.phone || !updates.city || !updates.address || !updates.description || !updates.originalCustomer) {
+        alert("שם, טלפון, עיר, כתובת, תיאור התקלה, ולקוח מקורי הם שדות חובה.");
         return;
       }
       managerUpdateDetails(b.dataset.id, updates, state.currentUser.name);
@@ -1199,10 +1648,12 @@ function wireEvents() {
   // Technician filters
   const techStatusSelect = document.getElementById("techStatusSelect");
   if (techStatusSelect) techStatusSelect.onchange = () => { state.techStatusFilter = techStatusSelect.value; render(); };
+  const techCitySelect = document.getElementById("techCitySelect");
+  if (techCitySelect) techCitySelect.onchange = () => { state.techCityFilter = techCitySelect.value; render(); };
   const techDateFilterInput = document.getElementById("techDateFilterInput");
   if (techDateFilterInput) techDateFilterInput.onchange = () => { state.techDateFilter = techDateFilterInput.value; render(); };
   const techFilterClear = document.getElementById("techFilterClear");
-  if (techFilterClear) techFilterClear.onclick = () => { state.techStatusFilter = "all"; state.techDateFilter = ""; render(); };
+  if (techFilterClear) techFilterClear.onclick = () => { state.techStatusFilter = "all"; state.techDateFilter = ""; state.techCityFilter = "all"; render(); };
 
   // Technician
   document.querySelectorAll("[data-tech]").forEach(card => {
@@ -1246,6 +1697,19 @@ window.addEventListener("error", (e) => {
         <p style="color:#64748b">${(e.message || e.error || "שגיאה לא ידועה").toString()}</p>
       </div>
     `;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (e.target.tagName === "IMG" && e.target.classList.contains("thumb")) {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(10,14,26,0.9); display:flex; align-items:center; justify-content:center; z-index:1000; cursor:zoom-out; padding:24px; animation:fadeInUp .15s ease";
+    const img = document.createElement("img");
+    img.src = e.target.src;
+    img.style.cssText = "max-width:100%; max-height:100%; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.5)";
+    overlay.appendChild(img);
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
   }
 });
 
