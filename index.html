@@ -175,6 +175,10 @@
   .notice-ok { background: var(--success-bg); color:#047857; border:1px solid #a7f3d0; }
   .notice-err { background: var(--danger-bg); color:#b91c1c; border:1px solid #fecaca; }
 
+  .input-error { border-color:#dc2626 !important; box-shadow: 0 0 0 3px rgba(220,38,38,0.12) !important; }
+  .field-error { color:#dc2626; font-size:12.5px; font-weight:500; margin:-10px 0 12px; }
+  .wizard-error { border:1.5px solid #dc2626; border-radius: var(--radius-md); padding:4px; }
+
   @keyframes fadeInUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
   @keyframes slideInDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
   .card { animation: fadeInUp .28s ease; }
@@ -204,11 +208,15 @@
   .section-title::before { content:""; width:3px; height:14px; border-radius:3px; background: var(--amber); display:block; }
 
   @media (max-width: 640px) {
-    main { padding:18px 14px 50px; }
+    main { padding:18px 14px 90px; }
     header { padding:12px 16px; }
     nav { padding:0 10px; }
     nav button { padding:12px 12px; font-size:14px; }
     .grid2, .detail-grid { grid-template-columns:1fr; }
+    #submitBtn {
+      position: fixed; bottom:0; right:0; left:0; z-index:30; margin:0; border-radius:0;
+      padding:16px; box-shadow: 0 -4px 16px rgba(0,0,0,0.15); max-width:none;
+    }
   }
 </style>
 </head>
@@ -287,6 +295,36 @@ function fmtNum(n) { return "#" + String(n).padStart(4, "0"); }
 function esc(s) {
   if (s === null || s === undefined) return "";
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function showFieldError(id, message) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add("input-error");
+  let msgEl = document.getElementById(id + "_error");
+  if (!msgEl) {
+    msgEl = document.createElement("div");
+    msgEl.id = id + "_error";
+    msgEl.className = "field-error";
+    el.insertAdjacentElement("afterend", msgEl);
+  }
+  msgEl.textContent = message;
+}
+function clearFieldError(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("input-error");
+  const msgEl = document.getElementById(id + "_error");
+  if (msgEl) msgEl.remove();
+}
+function focusFirstError(ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && el.classList.contains("input-error")) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el.focus) el.focus();
+      return;
+    }
+  }
 }
 
 function toCSVValue(v) {
@@ -369,11 +407,13 @@ const AC_ISSUES = {
     icon: "🔢",
     freeTextQuestion: "אנא הקלד את האותיות והמספרים שמופיעים על צג המזגן או השלט",
     freeTextPlaceholder: "לדוגמה: E5, F2...",
+    freeTextResultLabel: "קוד תקלה",
   },
   "אחר": {
     icon: "❓",
     freeTextQuestion: "תאר את התקלה בקצרה במילים שלך",
     freeTextPlaceholder: "כתוב כאן את התיאור...",
+    freeTextResultLabel: "תיאור",
   },
 };
 
@@ -399,7 +439,7 @@ function composeACDescription() {
   const parts = ["מזגן", ac.issue];
   if (conf.freeTextQuestion) {
     if (!ac.freeText.trim()) return null;
-    parts.push("קוד תקלה: " + ac.freeText.trim());
+    parts.push((conf.freeTextResultLabel || "פרטים") + ": " + ac.freeText.trim());
     return parts.join(" — ");
   }
   if (!ac.followUp) return null;
@@ -603,7 +643,7 @@ function wireWizardEvents() {
 }
 
 let state = {
-  tab: "customer",
+  tab: "status",
   currentUser: null,
   tickets: [],
   auditLog: [],
@@ -875,7 +915,6 @@ function render() {
       </div>
     </header>
     <nav>
-      <button data-tab="customer" class="${state.tab==='customer'?'active':''}">👤 לקוח</button>
       <button data-tab="status" class="${state.tab==='status'?'active':''}">🔍 בדיקת סטטוס</button>
       <button data-tab="staff" class="${state.tab==='staff'?'active':''}">${state.currentUser ? (state.currentUser.role==='manager'?'🧑‍💼 מנהל לקוחות':(state.currentUser.role==='technician'?'🔧 טכנאי':'🤝 סוכן')) : '🔒 כניסת צוות'}</button>
     </nav>
@@ -894,8 +933,7 @@ function render() {
   if (logoutBtn) logoutBtn.onclick = () => { state.currentUser = null; render(); };
 
   const main = document.getElementById("main");
-  if (state.tab === "customer") main.innerHTML = customerFormHtml();
-  else if (state.tab === "status") main.innerHTML = statusCheckHtml();
+  if (state.tab === "status") main.innerHTML = statusCheckHtml();
   else if (state.tab === "staff" && !state.currentUser) main.innerHTML = loginHtml();
   else if (state.tab === "staff" && state.currentUser.role === "manager") main.innerHTML = managerHtml();
   else if (state.tab === "staff" && state.currentUser.role === "technician") main.innerHTML = technicianHtml();
@@ -1094,13 +1132,13 @@ function customerFormHtml() {
       ${state.sentNotice ? `<div class="notice notice-ok">✓ הפנייה ${fmtNum(state.lastTicketNumber)} נשלחה בהצלחה — מנהל הלקוחות יטפל בה בקרוב.</div>` : ""}
       <div class="card">
         <div class="section-title">פרטי קשר</div>
-        <label class="field"><span class="label">שם מלא <span style="color:#dc2626">*</span></span><input class="input" id="f_name" placeholder="לדוגמה: רונית ישראלי"></label>
-        <label class="field"><span class="label">טלפון <span style="color:#dc2626">*</span></span><input class="input" id="f_phone" placeholder="050-0000000"></label>
+        <label class="field"><span class="label">לקוח קצה <span style="color:#dc2626">*</span></span><input class="input" id="f_name" placeholder="לדוגמה: רונית ישראלי"></label>
+        <label class="field"><span class="label">טלפון <span style="color:#dc2626">*</span></span><input class="input" id="f_phone" placeholder="050-0000000" inputmode="numeric" maxlength="11"></label>
         <label class="field"><span class="label">עיר <span style="color:#dc2626">*</span></span>
-          <select id="f_city">
-            <option value="">בחר עיר</option>
-            ${CITIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}
-          </select>
+          <input class="input" id="f_city" list="cityList" placeholder="הקלד לחיפוש עיר...">
+          <datalist id="cityList">
+            ${CITIES.map(c => `<option value="${esc(c)}">`).join("")}
+          </datalist>
         </label>
         <label class="field"><span class="label">כתובת <span style="color:#dc2626">*</span></span><input class="input" id="f_address" placeholder="רחוב ומספר"></label>
 
@@ -1110,16 +1148,8 @@ function customerFormHtml() {
         <label class="field"><span class="label">הערות (לא חובה)</span><textarea id="f_extra_notes" placeholder="מידע נוסף אם יש..."></textarea></label>
 
         <div class="section-title">פרטים נוספים</div>
-        <div class="grid2">
-          <label class="field"><span class="label">מק"ט</span><input class="input" id="f_sku" placeholder='מק"ט המוצר'></label>
-          <label class="field"><span class="label">סוכן</span>
-            <select id="f_agent">
-              <option value="">בחר סוכן</option>
-              ${state.users.filter(u => u.role === "agent").map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join("")}
-            </select>
-          </label>
-        </div>
-        <label class="field"><span class="label">הלקוח הסופי <span style="color:#dc2626">*</span></span><input class="input" id="f_original" placeholder="עבור מי הפנייה"></label>
+        <label class="field"><span class="label">מק"ט</span><input class="input" id="f_sku" placeholder='מק"ט המוצר'></label>
+        <label class="field"><span class="label">לקוח מקורי <span style="color:#dc2626">*</span></span><input class="input" id="f_original" placeholder="עבור מי הפנייה"></label>
         <label class="field">
           <span class="label">תמונה</span>
           <input type="file" accept="image/*" id="f_image">
@@ -1246,7 +1276,7 @@ function editDetailsFormHtml(t) {
         <label class="field"><span class="label">מק"ט</span><input class="input editSku" value="${esc(t.sku)}"></label>
         <label class="field"><span class="label">סוכן</span><input class="input editAgent" value="${esc(t.agent)}"></label>
       </div>
-      <label class="field"><span class="label">הלקוח הסופי</span><input class="input editOriginal" value="${esc(t.originalCustomer)}"></label>
+      <label class="field"><span class="label">לקוח מקורי</span><input class="input editOriginal" value="${esc(t.originalCustomer)}"></label>
       <div style="display:flex; gap:8px; margin-top:4px">
         <button type="button" class="btn-dark-sm saveDetailsBtn" data-id="${t.id}">💾 שמירת פרטים</button>
         <button type="button" class="btn-dark-sm cancelEditBtn" style="background:#f1f5f9; color:#334155">ביטול</button>
@@ -1296,9 +1326,22 @@ function allTicketCardHtml(t, technicians) {
 
 
 function agentHtml() {
+  const aTab = state.agentTab || "form";
   const all = state.tickets.filter(t => t.agent === state.currentUser.name);
+
+  const tabsBar = `
+    <div class="pill-row">
+      <button class="pill ${aTab==='form'?'active':''}" data-atab="form">📝 פתיחת פנייה חדשה</button>
+      <button class="pill ${aTab==='mine'?'active':''}" data-atab="mine">📋 הפניות שלי (${all.length})</button>
+    </div>
+  `;
+
+  if (aTab === "form") {
+    return tabsBar + customerFormHtml();
+  }
+
   const refreshBar = `<div class="pill-row"><button class="pill" id="refreshBtn">🔄 רענון</button></div>`;
-  if (all.length === 0) return refreshBar + `<div class="empty">אין פניות המקושרות אליך כרגע.</div>`;
+  if (all.length === 0) return tabsBar + refreshBar + `<div class="empty">אין פניות המקושרות אליך כרגע.</div>`;
 
   const statusFilter = state.agentStatusFilter || "all";
   const mine = statusFilter === "all" ? all : all.filter(t => t.status === statusFilter);
@@ -1322,7 +1365,7 @@ function agentHtml() {
     ? `<div class="empty">לא נמצאו פניות תואמות לסינון.</div>`
     : mine.map(t => agentCardHtml(t)).join("");
 
-  return refreshBar + filterBar + cards;
+  return tabsBar + refreshBar + filterBar + cards;
 }
 
 function agentCardHtml(t) {
@@ -1421,6 +1464,11 @@ function wireEvents() {
   // Customer form
   const submitBtn = document.getElementById("submitBtn");
   if (submitBtn) {
+    const phoneInput = document.getElementById("f_phone");
+    if (phoneInput) phoneInput.oninput = () => {
+      const digits = phoneInput.value.replace(/\D/g, "").slice(0, 10);
+      phoneInput.value = digits.length > 3 ? digits.slice(0, 3) + "-" + digits.slice(3) : digits;
+    };
     document.getElementById("f_image").onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -1437,22 +1485,47 @@ function wireEvents() {
       reader.readAsDataURL(file);
     };
     wireWizardEvents();
+    const requiredFieldIds = ["f_name", "f_phone", "f_city", "f_address", "f_original"];
+    requiredFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", () => clearFieldError(id));
+    });
+
     submitBtn.onclick = () => {
       const name = document.getElementById("f_name").value.trim();
       const phone = document.getElementById("f_phone").value.trim();
-      const city = document.getElementById("f_city").value;
+      const city = document.getElementById("f_city").value.trim();
       const address = document.getElementById("f_address").value.trim();
       const originalCustomer = document.getElementById("f_original").value.trim();
       const extraNotes = document.getElementById("f_extra_notes").value.trim();
       const composedDesc = getComposedDescription();
+
+      requiredFieldIds.forEach(clearFieldError);
+      const wizardEl = document.getElementById("wizardContainer");
+      wizardEl.classList.remove("wizard-error");
+      const wizardErr = document.getElementById("wizardContainer_error");
+      if (wizardErr) wizardErr.remove();
+
+      const values = { f_name: name, f_phone: phone, f_city: city, f_address: address, f_original: originalCustomer };
+      let hasError = false;
+      requiredFieldIds.forEach(id => {
+        if (!values[id]) { showFieldError(id, "שדה חובה"); hasError = true; }
+      });
       if (!composedDesc) {
-        alert("יש להשלים את תיאור התקלה (לבחור קטגוריה ולענות על השאלות) לפני השליחה.");
+        wizardEl.classList.add("wizard-error");
+        const msg = document.createElement("div");
+        msg.id = "wizardContainer_error";
+        msg.className = "field-error";
+        msg.textContent = "יש להשלים את תיאור התקלה";
+        wizardEl.insertAdjacentElement("afterend", msg);
+        hasError = true;
+      }
+      if (hasError) {
+        const firstBad = document.querySelector(".input-error, .wizard-error");
+        if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
-      if (!name || !phone || !city || !address || !originalCustomer) {
-        alert("יש למלא שם, טלפון, עיר, כתובת, ולקוח סופי — שדות חובה.");
-        return;
-      }
+
       const description = composedDesc + (extraNotes ? " | הערות: " + extraNotes : "");
       const img = pendingImage;
       pendingImage = null;
@@ -1460,7 +1533,7 @@ function wireEvents() {
       submitTicket({
         name, phone, city, address, description, originalCustomer,
         sku: document.getElementById("f_sku").value.trim(),
-        agent: document.getElementById("f_agent").value.trim(),
+        agent: state.currentUser ? state.currentUser.name : "",
         image: img,
       });
     };
@@ -1524,6 +1597,7 @@ function wireEvents() {
 
   // Manager tabs
   document.querySelectorAll("[data-mtab]").forEach(b => b.onclick = () => { state.managerTab = b.dataset.mtab; render(); });
+  document.querySelectorAll("[data-atab]").forEach(b => b.onclick = () => { state.agentTab = b.dataset.atab; render(); });
 
   // Manual refresh
   const refreshBtn = document.getElementById("refreshBtn");
